@@ -9,6 +9,18 @@
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const $ = id => document.getElementById(id);
 
+  // runs fn on the next paint frame, same as requestAnimationFrame — but
+  // with a short setTimeout safety net, so a throttled/backgrounded tab
+  // (some mobile browsers pause rAF) can never leave her stuck looking at
+  // a "hidden" button or panel that was only ever waiting on a frame that
+  // never came
+  function revealNextFrame(fn){
+    let done = false;
+    const run = () => { if (done) return; done = true; fn(); };
+    requestAnimationFrame(() => requestAnimationFrame(run));
+    setTimeout(run, 120);
+  }
+
   /* ================= Theme ================= */
   const themeToggle = $('themeToggle');
   const sunIcon = themeToggle.querySelector('.icon-sun');
@@ -332,7 +344,7 @@
     });
     setTimeout(() => {
       btn.hidden = false;
-      requestAnimationFrame(() => btn.classList.add('show'));
+      revealNextFrame(() => btn.classList.add('show'));
     }, delay + 300);
   }
   runPrelude();
@@ -533,7 +545,7 @@
 
       timers.push(setTimeout(() => {
         continueBtn.hidden = false;
-        requestAnimationFrame(() => continueBtn.classList.add('show'));
+        revealNextFrame(() => continueBtn.classList.add('show'));
       }, 1300));
     }
 
@@ -1020,11 +1032,7 @@
   // innerHTML the same tick their container is unhidden).
   function revealCards(cards){
     cards.forEach((card, i) => { card.style.transitionDelay = (i * 90) + 'ms'; });
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        cards.forEach(card => card.classList.add('in-view'));
-      });
-    });
+    revealNextFrame(() => cards.forEach(card => card.classList.add('in-view')));
   }
 
   // She never has to tap a card to flip it — each one shows its front
@@ -1226,14 +1234,14 @@
 
         setTimeout(() => {
           reveal.hidden = false;
-          requestAnimationFrame(() => requestAnimationFrame(() => reveal.classList.add('show')));
+          revealNextFrame(() => reveal.classList.add('show'));
         }, 1900);
 
         const lines = Array.from(reveal.querySelectorAll('.chest-msg-line'));
         lines.forEach((l, i) => setTimeout(() => l.classList.add('show'), 2300 + i*650));
         setTimeout(() => {
           continueBtn.hidden = false;
-          requestAnimationFrame(() => continueBtn.classList.add('show'));
+          revealNextFrame(() => continueBtn.classList.add('show'));
         }, 2300 + lines.length*650 + 250);
 
         continueBtn.addEventListener('click', () => {
