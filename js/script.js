@@ -25,30 +25,31 @@
     applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
 
   /* ================= Audio ================= */
+  // No visible toggle by design — the ambient track just plays quietly
+  // once she's interacted with the page (the gate click), and stays out
+  // of her way. If assets/audio/song.mp3 doesn't exist, this is a no-op.
   const bgm = $('bgm');
   const bdaySong = $('bdaySong');
-  const musicToggle = $('musicToggle');
-  const musicOnIcon = musicToggle.querySelector('.icon-music-on');
-  const musicOffIcon = musicToggle.querySelector('.icon-music-off');
-  let musicAvailable = true, musicPlaying = false;
+  const blastSound = $('blastSound');
+  let musicAvailable = true, musicPlaying = false, blastAvailable = true;
 
-  bgm.addEventListener('error', () => {
-    musicAvailable = false;
-    musicToggle.title = 'Add assets/audio/song.mp3 to enable music';
-    musicToggle.style.opacity = '.4';
-  });
-  function setMusicIcon(p){ musicOnIcon.hidden = !p; musicOffIcon.hidden = p; }
+  bgm.addEventListener('error', () => { musicAvailable = false; });
+  blastSound.addEventListener('error', () => { blastAvailable = false; });
+  // fires on every confetti-cannon moment (gate open, cake blow, the big
+  // reveals) — cheap to call often since it's just a short pop/whoosh
+  function playBlast(){
+    if (!blastAvailable) return;
+    try {
+      blastSound.currentTime = 0;
+      blastSound.volume = 0.55;
+      blastSound.play().catch(() => {});
+    } catch(e){}
+  }
   function tryPlayMusic(){
     if (!musicAvailable) return;
     bgm.volume = 0.3;
-    bgm.play().then(() => { musicPlaying = true; setMusicIcon(true); }).catch(()=>{});
+    bgm.play().then(() => { musicPlaying = true; }).catch(()=>{});
   }
-  musicToggle.addEventListener('click', () => {
-    if (!musicAvailable) return;
-    if (musicPlaying){ bgm.pause(); musicPlaying = false; }
-    else { bgm.volume = 0.3; bgm.play().catch(()=>{}); musicPlaying = true; }
-    setMusicIcon(musicPlaying);
-  });
 
   const SONG_VOL = 0.85, SONG_DUCK = 0.28;
   let songWasBgm = false, songOn = false;
@@ -219,6 +220,7 @@
   }
   function cannons(){
     if (reduced) return;
+    playBlast();
     const h = canvas.height;
     for (let i=0;i<70;i++){
       particles.push(makeParticle(0, h, -Math.PI/3 + (Math.random()-0.5)*0.6, 12+Math.random()*12));
@@ -275,27 +277,74 @@
     })(performance.now());
   }
 
+  // A little locket sits closed, showing "22". After a moment it opens —
+  // like a keepsake pendant — and "23" is waiting, glowing, inside.
   function runAgeSequence(){
     const badge = $('ageBadge');
     const caption = $('ageCaption'), btn = $('celContinue');
 
     if (reduced){
-      badge.classList.add('rolled','landed');
+      badge.classList.add('opening','landed');
       caption.classList.add('show');
       btn.classList.add('show');
       return;
     }
-    setTimeout(() => { badge.classList.add('rolling', 'rolled'); }, 2000);
+    setTimeout(() => { badge.classList.add('opening'); }, 2200); // let her read the 22 first
     setTimeout(() => {
-      badge.classList.remove('rolling');
       badge.classList.add('landed');
       const r = badge.getBoundingClientRect();
       burst(r.left + r.width/2, r.top + r.height/2, 70);
       for (let i=0;i<14;i++) setTimeout(() => spawnBalloon(true), i*90);
-    }, 4050);
-    setTimeout(() => caption.classList.add('show'), 4700);
-    setTimeout(() => btn.classList.add('show'), 5150);
+    }, 3400); // right as the doors finish swinging open
+    setTimeout(() => caption.classList.add('show'), 4100);
+    setTimeout(() => btn.classList.add('show'), 4600);
   }
+
+  /* ================= 0 · Prelude — a dark, cinematic opening ================= */
+  const prelude = $('prelude');
+  (function spawnStars(){
+    const el = $('preludeStars');
+    if (!el || reduced) return;
+    for (let i=0;i<48;i++){
+      const s = document.createElement('span');
+      s.className = 'prelude-star';
+      s.style.left = (Math.random()*100)+'%';
+      s.style.top = (Math.random()*100)+'%';
+      s.style.animationDelay = (Math.random()*4)+'s';
+      s.style.animationDuration = (2.2+Math.random()*3)+'s';
+      el.appendChild(s);
+    }
+  })();
+
+  function runPrelude(){
+    const lines = Array.from(prelude.querySelectorAll('.prelude-line'));
+    const btn = $('preludeBegin');
+    if (reduced){
+      lines.forEach(l => l.classList.add('show'));
+      btn.hidden = false;
+      btn.classList.add('show');
+      return;
+    }
+    let delay = 700;
+    lines.forEach((l, i) => {
+      setTimeout(() => l.classList.add('show'), delay);
+      delay += (i === lines.length - 1) ? 1500 : 2000;
+    });
+    setTimeout(() => {
+      btn.hidden = false;
+      requestAnimationFrame(() => btn.classList.add('show'));
+    }, delay + 300);
+  }
+  runPrelude();
+
+  $('preludeBegin').addEventListener('click', () => {
+    tryPlayMusic(); // the true first user gesture — best shot at audio autoplay
+    prelude.classList.add('fading');
+    setTimeout(() => {
+      prelude.hidden = true;
+      gate.hidden = false;
+    }, 900);
+  });
 
   /* ================= The chain: gate → celebrate → transitions → chapters ================= */
   const gate = $('gate'), celebrate = $('celebrate'), mainSlides = [
@@ -414,7 +463,8 @@
     );
   }
 
-  /* ================= 4 · Her journey — auto-playing zig-zag slideshow ================= */
+  /* ================= 4 · Her journey — pauses on each year to ask her
+     to watch a little video, zig-zagging left/right as it goes ================= */
   function runJourneySlide(onNext){
     const slide = $('journeySlide');
     const chapters = Array.from(slide.querySelectorAll('.js-chapter'));
@@ -427,10 +477,17 @@
       chapters.forEach((c, ci) => c.classList.toggle('active', ci === i));
       dots.forEach((d, di) => d.classList.toggle('active', di === i));
     }
+    function stopAllVideos(){
+      chapters.forEach(c => {
+        const v = c.querySelector('.js-video');
+        if (v && !v.paused) v.pause();
+      });
+    }
     function finish(){
       if (done) return;
       done = true;
       clear();
+      stopAllVideos();
       slide.classList.add('fading');
       timers.push(setTimeout(() => {
         slide.hidden = true;
@@ -438,11 +495,53 @@
         onNext();
       }, 700));
     }
+
+    // each chapter pauses here and genuinely waits: she can tap the play
+    // button to watch a little video, or tap "continue" whenever she's
+    // ready — she is asked, never forced, and never auto-skipped past.
+    function setupChapter(chapter){
+      const playBtn = chapter.querySelector('.js-play');
+      const continueBtn = chapter.querySelector('.js-continue');
+      const video = chapter.querySelector('.js-video');
+      const source = video.querySelector('source');
+      let advanced = false;
+
+      function advance(){
+        if (advanced) return;
+        advanced = true;
+        video.pause();
+        timers.push(setTimeout(next, 550));
+      }
+
+      playBtn.addEventListener('click', () => {
+        chapter.classList.add('watching');
+        try { video.currentTime = 0; } catch(e){}
+        video.play().catch(() => { chapter.classList.remove('watching'); });
+      });
+      video.addEventListener('ended', () => {
+        chapter.classList.remove('watching');
+        timers.push(setTimeout(advance, 900)); // a beat to enjoy it finishing
+      });
+      // no real clip at that path yet — fall back to a working sample
+      // rather than leave her staring at a broken player
+      source.addEventListener('error', () => {
+        source.src = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+        video.load();
+      }, { once:true });
+
+      continueBtn.addEventListener('click', advance);
+
+      timers.push(setTimeout(() => {
+        continueBtn.hidden = false;
+        requestAnimationFrame(() => continueBtn.classList.add('show'));
+      }, 1300));
+    }
+
     function next(){
       idx++;
       if (idx >= chapters.length){ finish(); return; }
       showChapter(idx);
-      timers.push(setTimeout(next, idx === 0 ? 3800 : 3500));
+      setupChapter(chapters[idx]);
     }
 
     skip.onclick = finish;
@@ -469,7 +568,34 @@
   const cakeHint = $('cakeHint'), cakeSub = $('cakeSub');
   const cakeBlessing = $('cakeBlessing');
   const wishPopup = $('wishPopup'), wishPopupText = $('wishPopupText');
-  let blown = false, wishOnDone = null;
+  const wishDustEl = $('wishDust');
+  const breathFill = $('breathRingFill');
+  const wishStarEl = $('wishStar');
+  const RING_C = 2 * Math.PI * 62;
+  let blown = false, wishOnDone = null, wishDustTimer = null;
+  let canBlow = false, holding = false, holdStart = 0, holdRaf = null;
+  const HOLD_MS = 1250;
+
+  // little motes of gold drifting up from the candles while they're lit
+  function startWishDust(){
+    if (reduced || wishDustTimer) return;
+    function spawn(){
+      const m = document.createElement('span');
+      m.className = 'wd-mote';
+      const ox = (Math.random() * 70 - 35);
+      m.style.setProperty('--wd-ox', ox + 'px');
+      m.style.setProperty('--wd-x', (ox * 0.6 + (Math.random()*30-15)) + 'px');
+      const dur = 2.8 + Math.random() * 1.4;
+      m.style.animationDuration = dur + 's';
+      wishDustEl.appendChild(m);
+      setTimeout(() => m.remove(), dur * 1000 + 100);
+    }
+    for (let i=0;i<3;i++) setTimeout(spawn, i*260);
+    wishDustTimer = setInterval(spawn, 420);
+  }
+  function stopWishDust(){
+    if (wishDustTimer){ clearInterval(wishDustTimer); wishDustTimer = null; }
+  }
 
   function showPopup(text){
     wishPopupText.textContent = text;
@@ -487,7 +613,7 @@
     cakeSub.textContent = 'lighting your candles…';
     startBirthdaySong();
 
-    setTimeout(() => cakeStage.classList.add('lit'), 500);
+    setTimeout(() => { cakeStage.classList.add('lit'); startWishDust(); }, 500);
     setTimeout(() => { cakeSub.textContent = 'twenty-three, and every one of them worth celebrating'; }, 1600);
 
     setTimeout(() => { showPopup('Close your eyes, and make a wish…'); speak('Close your eyes, and make a wish.'); }, 2200);
@@ -497,21 +623,57 @@
     setTimeout(hidePopup, 9800);
 
     setTimeout(() => {
-      showPopup('Blow out the candles 🎂');
-      speak('Now blow out the candles.');
+      showPopup('Press and hold the cake to blow them out 🎂');
+      speak('Now, press and hold to blow out the candles.');
+      canBlow = true;
       cakeBtn.disabled = false;
-      cakeHint.textContent = 'tap the cake to blow them out';
+      cakeHint.textContent = 'press & hold to blow them out';
     }, 10300);
     setTimeout(hidePopup, 13300);
   }
 
-  cakeBtn.addEventListener('click', () => {
-    if (blown || cakeBtn.disabled) return;
+  // a single spark launches from the candles and arcs up across the sky —
+  // the wish, sent off, instead of the cake just vanishing
+  function launchWishStar(){
+    if (reduced) return;
+    const r = cakeBtn.getBoundingClientRect();
+    const sx = r.left + r.width*0.6, sy = r.top + r.height*0.16;
+    const ex = innerWidth*0.5 + (Math.random()*180-90), ey = innerHeight*0.08;
+    const mx = (sx+ex)/2 + (Math.random()*140-70), my = Math.min(sy,ey) - 150;
+    const dur = 1650, t0 = performance.now();
+    wishStarEl.style.opacity = '1';
+    function frame(now){
+      const t = Math.min(1, (now-t0)/dur), it = 1-t;
+      const x = it*it*sx + 2*it*t*mx + t*t*ex;
+      const y = it*it*sy + 2*it*t*my + t*t*ey;
+      wishStarEl.style.transform = `translate(${x}px, ${y}px) scale(${1-t*0.5})`;
+      wishStarEl.style.opacity = String(Math.min(1, (1-t)*1.6));
+      if (Math.random() < 0.55){
+        const trail = document.createElement('span');
+        trail.className = 'wish-star-trail';
+        trail.style.transform = `translate(${x}px, ${y}px)`;
+        document.body.appendChild(trail);
+        setTimeout(() => trail.remove(), 720);
+      }
+      if (t < 1) requestAnimationFrame(frame);
+      else wishStarEl.style.opacity = '0';
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function setBreath(p){ breathFill.style.strokeDashoffset = (RING_C * (1-p)).toFixed(1); }
+
+  function doBlow(){
+    if (blown) return;
     blown = true;
+    canBlow = false;
     cakeBtn.disabled = true;
+    cakeStage.classList.remove('holding','blow-2','blow-3');
     cakeStage.classList.add('blown');
     cakeHint.textContent = '';
     hidePopup();
+    stopWishDust();
+    setBreath(0);
 
     const r = cakeBtn.getBoundingClientRect();
     burst(r.left + r.width/2, r.top + r.height*0.18, 110);
@@ -520,21 +682,17 @@
     setTimeout(() => burst(innerWidth/2, innerHeight*0.4, 80), 300);
     for (let i=0;i<22;i++) setTimeout(() => spawnBalloon(true), i*90);
 
-    setTimeout(() => cakeStage.classList.add('candles-gone'), 5000);
-    setTimeout(() => {
-      cakeStage.classList.add('cake-gone');
-      const cr = cakeBtn.getBoundingClientRect();
-      burst(cr.left + cr.width/2, cr.top + cr.height*0.3, 38);
-    }, 5400);
+    setTimeout(() => cakeStage.classList.add('bloom'), 500);
+    setTimeout(launchWishStar, 900);
 
     setTimeout(() => {
       cakeBlessing.hidden = false;
       cakeSub.textContent = 'your wish is already on its way';
       speak('May all your wishes come true.');
       burst(innerWidth/2, innerHeight*0.45, 60);
-    }, 6700);
+    }, 3400);
 
-    setTimeout(stopBirthdaySong, 12000);
+    setTimeout(stopBirthdaySong, 9000);
 
     setTimeout(() => {
       const slide = $('cakeSlide');
@@ -544,8 +702,41 @@
         slide.classList.remove('fading');
         if (wishOnDone) wishOnDone();
       }, 800);
-    }, 10300);
-  });
+    }, 7200);
+  }
+
+  // she has to press and hold — the flames sway harder, the ring fills,
+  // and only once she's really held it does the wish get sent off
+  function loopHold(){
+    if (!holding) return;
+    const t = Math.min(1, (performance.now()-holdStart)/HOLD_MS);
+    setBreath(t);
+    cakeStage.classList.toggle('blow-2', t > 0.35);
+    cakeStage.classList.toggle('blow-3', t > 0.7);
+    if (t >= 1){ holding = false; doBlow(); return; }
+    holdRaf = requestAnimationFrame(loopHold);
+  }
+  function startHold(e){
+    if (!canBlow || blown) return;
+    e.preventDefault();
+    if (reduced){ doBlow(); return; }
+    holding = true; holdStart = performance.now();
+    cakeStage.classList.add('holding');
+    cakeHint.textContent = 'keep holding… blow it all out';
+    loopHold();
+  }
+  function cancelHold(){
+    if (!holding) return;
+    holding = false;
+    if (holdRaf) cancelAnimationFrame(holdRaf);
+    cakeStage.classList.remove('holding','blow-2','blow-3');
+    setBreath(0);
+    if (!blown) cakeHint.textContent = 'press & hold to blow them out';
+  }
+  cakeBtn.addEventListener('pointerdown', startHold);
+  cakeBtn.addEventListener('pointerup', cancelHold);
+  cakeBtn.addEventListener('pointerleave', cancelHold);
+  cakeBtn.addEventListener('pointercancel', cancelHold);
 
   function goCakeSlide(){
     $('cakeSlide').hidden = false;
@@ -822,17 +1013,28 @@
     });
   }
 
+  // Every card grid in this site reveals the instant its full-screen slide
+  // becomes visible — there's no actual scrolling-into-view left to detect,
+  // so a plain double-rAF fade-in is simpler and more reliable than routing
+  // through IntersectionObserver (which was flaky for cards inserted via
+  // innerHTML the same tick their container is unhidden).
   function revealCards(cards){
-    const io = new IntersectionObserver(entries => {
-      entries.forEach(en => {
-        if (!en.isIntersecting) return;
-        const card = en.target;
-        card.style.transitionDelay = (Array.from(cards).indexOf(card) * 90) + 'ms';
-        card.classList.add('in-view');
-        io.unobserve(card);
+    cards.forEach((card, i) => { card.style.transitionDelay = (i * 90) + 'ms'; });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        cards.forEach(card => card.classList.add('in-view'));
       });
-    }, { threshold:0.1 });
-    cards.forEach(c => io.observe(c));
+    });
+  }
+
+  // She never has to tap a card to flip it — each one shows its front
+  // face just long enough to read the label, then turns itself over and
+  // is ready to scratch. Staggered per card so a whole grid doesn't flip
+  // in lockstep.
+  function autoFlipCards(cards, onFinish, baseDelay = 1000, stagger = 260){
+    cards.forEach((card, i) => {
+      setTimeout(() => flipCard(card, onFinish), baseDelay + i * stagger);
+    });
   }
 
   /* ================= 6 · Five little secrets ================= */
@@ -866,6 +1068,7 @@
     cardsStarted = true;
     cardsSlide.hidden = false;
     revealCards(scratchCards);
+    autoFlipCards(scratchCards, onSecretFound, 1100, 280);
   }
 
   function goFinalTransition(){
@@ -882,10 +1085,20 @@
   /* ================= 7 · Final surprise ================= */
   const finalSlide = $('finalSlide');
   const finalCardEl = finalSlide.querySelector('.scard');
+  const finalSub = $('finalSub');
   let finalStarted = false;
 
+  // she just scratched it — let the reveal breathe for a few seconds
+  // before the modal takes over the screen, instead of slamming into it
   function onFinalFound(card){
-    openModal('final');
+    const originalSub = finalSub.textContent;
+    finalSub.textContent = 'just a moment…';
+    finalSub.classList.add('breathe');
+    setTimeout(() => {
+      finalSub.classList.remove('breathe');
+      finalSub.textContent = originalSub;
+      openModal('final');
+    }, 7000);
   }
   wireScratchCard(finalCardEl, onFinalFound);
 
@@ -895,6 +1108,7 @@
     finalStarted = true;
     finalCardEl.classList.add('ready');
     revealCards([finalCardEl]);
+    autoFlipCards([finalCardEl], onFinalFound, 1500);
   }
 
   /* ================= 8 · One more thing (a real box, a real gift) ================= */
@@ -939,38 +1153,93 @@
       ['Wait… this isn’t the end.',
        "There's one more thing waiting for you — smaller than the rest, but it means the most."],
       'keep going',
-      goBoxScratch
+      goBoxBlast
     );
   }
 
-  function goBoxScratch(){
+  let boxSparkleTimer = null;
+  function startBoxSparkles(container){
+    if (reduced || boxSparkleTimer) return;
+    function spawn(){
+      const s = document.createElement('span');
+      s.className = 'chest-spark';
+      const ox = Math.random()*70 - 35;
+      s.style.setProperty('--cs-ox', ox+'px');
+      s.style.setProperty('--cs-x', (ox*0.6 + (Math.random()*30-15))+'px');
+      const dur = 2.2 + Math.random()*1.2;
+      s.style.animationDuration = dur+'s';
+      container.appendChild(s);
+      setTimeout(() => s.remove(), dur*1000+100);
+    }
+    for (let i=0;i<4;i++) setTimeout(spawn, i*220);
+    boxSparkleTimer = setInterval(spawn, 380);
+  }
+
+  // a little treasure chest that bursts open on its own — no scratching —
+  // and asks her to go open the real box waiting for her
+  function goBoxBlast(){
     boxSlide.hidden = false;
     renderBoxStep(`
-      <div class="card-grid final-grid">
-        <div class="scard scard-grand scard-box" id="boxScard" tabindex="0" role="button" aria-label="One more thing — tap to reveal">
-          <div class="scard-inner">
-            <div class="scard-face scard-front">
-              <span class="scard-orn" aria-hidden="true">✦</span>
-              <span class="scard-icon">💜</span>
-              <span class="scard-label">One more thing</span>
-              <span class="scard-tap">tap to turn</span>
-            </div>
-            <div class="scard-face scard-back">
-              <div class="scard-prize">
-                <span class="scard-prize-icon">🎁</span>
-                <span class="scard-prize-title">Not here, love.</span>
-                <p class="scard-prize-note">It's inside the little box I gave you. Go on — open it.</p>
-              </div>
-              <div class="scratch-shine" aria-hidden="true"></div>
-              <canvas class="scratch"></canvas>
-            </div>
+      <div class="chest-stage" id="chestStage">
+        <span class="chest-glow" aria-hidden="true"></span>
+        <div class="chest-burst" id="chestBurst" aria-hidden="true">
+          <span class="ray" style="transform:rotate(0deg)"></span>
+          <span class="ray" style="transform:rotate(45deg)"></span>
+          <span class="ray" style="transform:rotate(90deg)"></span>
+          <span class="ray" style="transform:rotate(135deg)"></span>
+          <span class="ray" style="transform:rotate(180deg)"></span>
+          <span class="ray" style="transform:rotate(225deg)"></span>
+          <span class="ray" style="transform:rotate(270deg)"></span>
+          <span class="ray" style="transform:rotate(315deg)"></span>
+        </div>
+        <div class="chest-sparkles" id="chestSparkles" aria-hidden="true"></div>
+        <div class="chest" id="chest">
+          <div class="chest-lid"><span class="chest-lid-band"></span></div>
+          <div class="chest-body">
+            <span class="chest-band cb1"></span><span class="chest-band cb2"></span>
+            <span class="chest-lock"><span class="chest-lock-gem">♥</span></span>
           </div>
+          <span class="chest-shine" aria-hidden="true"></span>
+        </div>
+        <div class="chest-reveal" id="chestReveal" hidden>
+          <div class="chest-message" id="chestMessage">
+            <p class="chest-msg-line l1">Not here, love.</p>
+            <p class="chest-msg-line l2">It's inside the little box I gave you.</p>
+            <p class="chest-msg-line l3 accent">Go on — open it. 🤍</p>
+          </div>
+          <button class="cel-btn chest-continue" id="chestContinue" hidden>
+            <span>I'm going to open it</span><span class="cel-btn-arrow">→</span>
+          </button>
         </div>
       </div>`,
       () => {
-        const boxScard = $('boxScard');
-        revealCards([boxScard]); // .scard starts at opacity:0 until this runs — this was the bug
-        wireScratchCard(boxScard, () => setTimeout(goOpenedQuestion, 1600));
+        const stage = $('chestStage'), reveal = $('chestReveal'), continueBtn = $('chestContinue');
+
+        stage.classList.add('shaking');
+        setTimeout(() => {
+          stage.classList.remove('shaking');
+          stage.classList.add('opened');
+          cannons();
+          setTimeout(() => burst(innerWidth/2, innerHeight*0.32, 90), 200);
+          startBoxSparkles($('chestSparkles'));
+        }, 900);
+
+        setTimeout(() => {
+          reveal.hidden = false;
+          requestAnimationFrame(() => requestAnimationFrame(() => reveal.classList.add('show')));
+        }, 1900);
+
+        const lines = Array.from(reveal.querySelectorAll('.chest-msg-line'));
+        lines.forEach((l, i) => setTimeout(() => l.classList.add('show'), 2300 + i*650));
+        setTimeout(() => {
+          continueBtn.hidden = false;
+          requestAnimationFrame(() => continueBtn.classList.add('show'));
+        }, 2300 + lines.length*650 + 250);
+
+        continueBtn.addEventListener('click', () => {
+          if (boxSparkleTimer){ clearInterval(boxSparkleTimer); boxSparkleTimer = null; }
+          goOpenedQuestion();
+        });
       }
     );
   }
@@ -997,23 +1266,47 @@
     );
   }
 
+  // an unclickable "No" — it dodges the moment she gets close, so "Yes"
+  // is the only real answer (funny, not frustrating: it never blocks her)
+  const NO_TAUNTS = ['No','Nope!','Nice try 😄','Not a chance','Never!','Catch me first','Nuh-uh','Try again'];
+  function makeDodgeButton(btn, zone){
+    let ti = 0;
+    function place(){
+      const zr = zone.getBoundingClientRect(), br = btn.getBoundingClientRect();
+      const maxX = Math.max(0, zr.width - br.width), maxY = Math.max(0, zr.height - br.height);
+      btn.style.left = (Math.random()*maxX).toFixed(0) + 'px';
+      btn.style.top = (Math.random()*maxY).toFixed(0) + 'px';
+      btn.textContent = NO_TAUNTS[ti % NO_TAUNTS.length];
+      ti++;
+    }
+    place();
+    btn.addEventListener('pointerenter', place);
+    btn.addEventListener('pointerdown', e => { e.preventDefault(); place(); });
+    zone.addEventListener('pointermove', e => {
+      const br = btn.getBoundingClientRect();
+      const dx = e.clientX - (br.left+br.width/2), dy = e.clientY - (br.top+br.height/2);
+      if (Math.hypot(dx,dy) < 75) place();
+    });
+    addEventListener('resize', place);
+  }
+
   function goLikeQuestion(){
     renderBoxStep(`
       <h2 class="box-title">Do you like it?</h2>
-      <p class="box-sub">be honest… actually, don't. just say yes. 😄</p>
+      <p class="box-sub">be honest…</p>
       <div class="box-btn-row">
-        <button class="box-btn like-btn">Yes</button>
-        <button class="box-btn like-btn">Yesss! 😍</button>
-        <button class="box-btn like-btn">YESSSSS!! 🥹</button>
+        <button class="box-btn" id="likeYes">Yes</button>
+      </div>
+      <div class="dodge-zone" id="dodgeZone">
+        <button class="box-btn no-btn" id="noBtn">No</button>
       </div>`,
       () => {
-        boxStage.querySelectorAll('.like-btn').forEach(b => {
-          b.addEventListener('click', () => {
-            burst(innerWidth/2, innerHeight*0.5, 55);
-            cannons();
-            goConfirmRound(0);
-          });
+        $('likeYes').addEventListener('click', () => {
+          burst(innerWidth/2, innerHeight*0.5, 55);
+          cannons();
+          goConfirmRound(0);
         });
+        makeDodgeButton($('noBtn'), $('dodgeZone'));
       }
     );
   }
@@ -1041,9 +1334,20 @@
     setTimeout(() => {
       boxSlide.hidden = true;
       boxSlide.classList.remove('fading');
-      $('endingSlide').hidden = false;
+      const endingSlide = $('endingSlide');
+      endingSlide.hidden = false;
       startEndingPetals();
       burst(innerWidth/2, innerHeight*0.3, 60);
+
+      // let her sit with the bouquet a while, then quietly close the book
+      setTimeout(() => {
+        endingSlide.classList.add('fading');
+        setTimeout(() => {
+          endingSlide.hidden = true;
+          endingSlide.classList.remove('fading');
+          goEpilogue();
+        }, 1000);
+      }, reduced ? 3000 : 11000);
     }, 800);
   }
 
@@ -1064,5 +1368,39 @@
     }
     for (let i=0;i<8;i++) setTimeout(spawn, i*300);
     setInterval(spawn, 900);
+  }
+
+  /* ================= 10 · Epilogue — one last quiet note, then black ================= */
+  (function spawnEpilogueStars(){
+    const el = $('epilogueStars');
+    if (!el || reduced) return;
+    for (let i=0;i<40;i++){
+      const s = document.createElement('span');
+      s.className = 'epilogue-star';
+      s.style.left = (Math.random()*100)+'%';
+      s.style.top = (Math.random()*100)+'%';
+      s.style.animationDelay = (Math.random()*4)+'s';
+      s.style.animationDuration = (2.4+Math.random()*3)+'s';
+      el.appendChild(s);
+    }
+  })();
+
+  // a last, unhurried note fades in on black, holds, then fades away —
+  // leaving her on a still, quiet dark screen. nothing more to tap or read.
+  function goEpilogue(){
+    const slide = $('epilogueSlide'), inner = $('epilogueInner');
+    slide.hidden = false;
+    const lines = Array.from(inner.querySelectorAll('.epilogue-line'));
+    if (reduced){
+      lines.forEach(l => l.classList.add('show'));
+      setTimeout(() => inner.classList.add('fade-out'), 4000);
+      return;
+    }
+    let delay = 1000;
+    lines.forEach((l, i) => {
+      setTimeout(() => l.classList.add('show'), delay);
+      delay += (i === lines.length - 1) ? 2200 : 1900;
+    });
+    setTimeout(() => inner.classList.add('fade-out'), delay + 3800);
   }
 })();
