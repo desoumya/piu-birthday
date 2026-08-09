@@ -22,19 +22,8 @@
   }
 
   /* ================= Theme ================= */
-  const themeToggle = $('themeToggle');
-  const sunIcon = themeToggle.querySelector('.icon-sun');
-  const moonIcon = themeToggle.querySelector('.icon-moon');
-  function applyTheme(theme){
-    root.setAttribute('data-theme', theme);
-    localStorage.setItem('piu-theme', theme);
-    sunIcon.hidden = theme === 'dark';
-    moonIcon.hidden = theme !== 'dark';
-  }
-  applyTheme(localStorage.getItem('piu-theme') ||
-    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
-  themeToggle.addEventListener('click', () =>
-    applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
+  // one fixed theme by design — dark, cinematic, no toggle to fuss with
+  root.setAttribute('data-theme', 'dark');
 
   /* ================= Audio ================= */
   // No visible toggle by design — the ambient track just plays quietly
@@ -289,15 +278,31 @@
     })(performance.now());
   }
 
+  (function spawnCelStars(){
+    const el = $('celStars');
+    if (!el || reduced) return;
+    for (let i=0;i<36;i++){
+      const s = document.createElement('span');
+      s.className = 'cel-star';
+      s.style.left = (Math.random()*100)+'%';
+      s.style.top = (Math.random()*100)+'%';
+      s.style.animationDelay = (Math.random()*4)+'s';
+      s.style.animationDuration = (2.2+Math.random()*3)+'s';
+      el.appendChild(s);
+    }
+  })();
+
   // A little locket sits closed, showing "22". After a moment it opens —
   // like a keepsake pendant — and "23" is waiting, glowing, inside.
   function runAgeSequence(){
     const badge = $('ageBadge');
-    const caption = $('ageCaption'), btn = $('celContinue');
+    const caption = $('ageCaption'), btn = $('celContinue'), bouquet = $('celBouquet');
 
     if (reduced){
       badge.classList.add('opening','landed');
       caption.classList.add('show');
+      bouquet.hidden = false;
+      bouquet.classList.add('show');
       btn.classList.add('show');
       return;
     }
@@ -309,7 +314,11 @@
       for (let i=0;i<14;i++) setTimeout(() => spawnBalloon(true), i*90);
     }, 3400); // right as the doors finish swinging open
     setTimeout(() => caption.classList.add('show'), 4100);
-    setTimeout(() => btn.classList.add('show'), 4600);
+    setTimeout(() => {
+      bouquet.hidden = false;
+      revealNextFrame(() => bouquet.classList.add('show'));
+    }, 4700);
+    setTimeout(() => btn.classList.add('show'), 5400);
   }
 
   /* ================= 0 · Prelude — a dark, cinematic opening ================= */
@@ -475,31 +484,52 @@
     );
   }
 
-  /* ================= 4 · Her journey — pauses on each year to ask her
-     to watch a little video, zig-zagging left/right as it goes ================= */
+  /* ================= 4 · Her journey — a cinematic story, one scene at a
+     time: the date on black, then the video plays itself, then the words
+     that go with it. No skipping, no tapping to watch — she just receives
+     it, chapter by chapter, all the way to today. ================= */
+  const JOURNEY_CHAPTERS = [
+    { year:'2003', title:'The Beginning',
+      cap:"The day the world quietly rearranged itself around one small, remarkable heartbeat — and got immeasurably better without asking anyone's permission.",
+      video:'assets/video/journey1.mp4', poster:'assets/images/journey1.jpg' },
+    { year:'2008', title:'Small, and Completely in Charge',
+      cap:"Tiny hands, enormous opinions, and a smile that already knew exactly what it was doing. Some things, it turns out, you're simply born knowing.",
+      video:'assets/video/journey2.mp4', poster:'assets/images/journey2.jpg' },
+    { year:'2014', title:'School Days',
+      cap:'Somewhere between these lessons and this laughter, you were quietly becoming the kindest person I would ever have the extraordinary luck of knowing.',
+      video:'assets/video/journey3.mp4', poster:'assets/images/journey3.jpg' },
+    { year:'2021', title:'The World Went Quiet',
+      cap:"Everything paused that year — the noise, the plans, the certainty. You didn't. You kept growing, gently, into exactly who you were always meant to become.",
+      video:'assets/video/journey4.mp4', poster:'assets/images/journey4.jpg' },
+    { year:'2023', title:'Golden College Days',
+      cap:'Late nights, louder laughter, a thousand small adventures — the years quietly writing the story of the woman I would one day fall hopelessly, entirely for.',
+      video:'assets/video/journey5.mp4', poster:'assets/images/journey5.jpg' },
+    { year:'25th January, 2026', title:'The Day You Walked In',
+      cap:"An ordinary Sunday, and then — quite without warning — my whole life quietly rearranged itself around you. Months later, I still haven't worked out how I got this lucky.",
+      video:'assets/video/journey6.mp4', poster:'assets/images/journey6.jpg' }
+  ];
+
   function runJourneySlide(onNext){
     const slide = $('journeySlide');
-    const chapters = Array.from(slide.querySelectorAll('.js-chapter'));
+    const cinema = $('jsCinema');
     const dots = Array.from(slide.querySelectorAll('.js-dot'));
-    const skip = $('jsSkip');
-    let idx = -1, timers = [], done = false;
+    let idx = -1, timers = [], done = false, currentVideo = null;
 
     function clear(){ timers.forEach(clearTimeout); timers = []; }
-    function showChapter(i){
-      chapters.forEach((c, ci) => c.classList.toggle('active', ci === i));
-      dots.forEach((d, di) => d.classList.toggle('active', di === i));
-    }
-    function stopAllVideos(){
-      chapters.forEach(c => {
-        const v = c.querySelector('.js-video');
-        if (v && !v.paused) v.pause();
+    function showDot(i){
+      dots.forEach((d, di) => {
+        d.classList.toggle('active', di === i);
+        d.classList.toggle('done', di < i);
       });
+    }
+    function stopCurrentVideo(){
+      if (currentVideo){ try { currentVideo.pause(); } catch(e){} currentVideo = null; }
     }
     function finish(){
       if (done) return;
       done = true;
       clear();
-      stopAllVideos();
+      stopCurrentVideo();
       slide.classList.add('fading');
       timers.push(setTimeout(() => {
         slide.hidden = true;
@@ -508,56 +538,143 @@
       }, 700));
     }
 
-    // each chapter pauses here and genuinely waits: she can tap the play
-    // button to watch a little video, or tap "continue" whenever she's
-    // ready — she is asked, never forced, and never auto-skipped past.
-    function setupChapter(chapter){
-      const playBtn = chapter.querySelector('.js-play');
-      const continueBtn = chapter.querySelector('.js-continue');
-      const video = chapter.querySelector('.js-video');
-      const source = video.querySelector('source');
-      let advanced = false;
+    // swaps the scene on stage with a short cross-fade; afterMount runs
+    // once the new scene is actually in the DOM
+    function renderScene(html, afterMount){
+      const old = cinema.querySelector('.js-scene');
+      const mount = () => { cinema.innerHTML = html; if (afterMount) afterMount(); };
+      if (old && !reduced){ old.classList.add('leaving'); timers.push(setTimeout(mount, 380)); }
+      else mount();
+    }
 
-      function advance(){
-        if (advanced) return;
-        advanced = true;
-        video.pause();
-        timers.push(setTimeout(next, 550));
+    function showDateScene(ch, onNext){
+      renderScene(`
+        <div class="js-scene js-date-scene">
+          <div class="js-date-sparkle" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <p class="js-date-eyebrow">a memory from</p>
+          <p class="js-date-year">${ch.year}</p>
+          <span class="js-date-rule"></span>
+        </div>`,
+        () => {
+          const scene = cinema.querySelector('.js-date-scene');
+          scene.querySelectorAll('.js-date-sparkle span').forEach((s, i) => {
+            s.style.left = (10 + Math.random()*80) + '%';
+            s.style.top = (10 + Math.random()*80) + '%';
+            s.style.animationDelay = (i*0.35) + 's';
+          });
+          timers.push(setTimeout(() => scene.classList.add('lit'), 100));
+          timers.push(setTimeout(() => scene.querySelector('.js-date-eyebrow').classList.add('show'), 150));
+          timers.push(setTimeout(() => scene.querySelector('.js-date-year').classList.add('show'), 500));
+          timers.push(setTimeout(() => scene.querySelector('.js-date-rule').classList.add('show'), 1500));
+          timers.push(setTimeout(onNext, 2700));
+        });
+    }
+
+    function showVideoScene(ch, onNext){
+      renderScene(`
+        <div class="js-scene js-video-scene">
+          <div class="js-video-frame" id="jsVideoFrame">
+            <span class="js-video-frame-glow" aria-hidden="true"></span>
+            <span class="js-video-corner tl" aria-hidden="true"></span><span class="js-video-corner tr" aria-hidden="true"></span>
+            <span class="js-video-corner bl" aria-hidden="true"></span><span class="js-video-corner br" aria-hidden="true"></span>
+            <span class="js-video-year">${ch.year}</span>
+            <video class="js-video-el" id="jsVideoEl" playsinline${ch.poster ? ` poster="${ch.poster}"` : ''}>
+              <source src="${ch.video}" type="video/mp4">
+            </video>
+            <button class="js-unmute" id="jsUnmute" hidden aria-label="Turn sound on">🔇</button>
+          </div>
+        </div>`,
+        () => {
+          const frame = $('jsVideoFrame'), video = $('jsVideoEl'), unmuteBtn = $('jsUnmute');
+          const source = video.querySelector('source');
+          currentVideo = video;
+          let advanced = false;
+          const wasBgmPlaying = musicPlaying;
+          if (wasBgmPlaying) bgm.pause();
+
+          function advance(){
+            if (advanced) return;
+            advanced = true;
+            try { video.pause(); } catch(e){}
+            if (wasBgmPlaying) bgm.play().catch(() => {});
+            currentVideo = null;
+            timers.push(setTimeout(onNext, 500));
+          }
+
+          video.addEventListener('ended', () => timers.push(setTimeout(advance, 700)));
+          video.addEventListener('playing', () => frame.classList.add('playing'));
+          // no real clip at that path yet — fall back to a working sample
+          // rather than leave her staring at a broken player
+          source.addEventListener('error', () => {
+            source.src = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+            video.load();
+          }, { once:true });
+
+          timers.push(setTimeout(() => frame.classList.add('show'), 60));
+
+          // try with sound; if the browser blocks that, fall back to a
+          // muted autoplay and let her tap once to turn the sound on —
+          // she's never stuck looking at a video that refuses to start
+          video.play().catch(() => {
+            video.muted = true;
+            unmuteBtn.hidden = false;
+            video.play().catch(() => {});
+          });
+          unmuteBtn.addEventListener('click', () => { video.muted = false; unmuteBtn.hidden = true; });
+
+          timers.push(setTimeout(advance, 22000)); // safety net if a clip never fires 'ended'
+        });
+    }
+
+    function showCaptionScene(ch, onNext){
+      renderScene(`
+        <div class="js-scene js-cap-scene">
+          <span class="js-cap-year" id="jsCapYear">${ch.year}</span>
+          <h3 class="js-cap-title" id="jsCapTitle">${ch.title}</h3>
+          <span class="js-cap-rule" id="jsCapRule"></span>
+          <p class="js-cap-text" id="jsCapText">${ch.cap}</p>
+          <button class="cel-btn js-continue-btn" id="jsCapContinue" hidden><span>watch a little of it</span><span class="cel-btn-arrow">→</span></button>
+        </div>`,
+        () => {
+          const year = $('jsCapYear'), title = $('jsCapTitle'), rule = $('jsCapRule'), text = $('jsCapText'), btn = $('jsCapContinue');
+          let advanced = false;
+          function advance(){ if (advanced) return; advanced = true; onNext(); }
+          timers.push(setTimeout(() => year.classList.add('show'), 100));
+          timers.push(setTimeout(() => title.classList.add('show'), 500));
+          timers.push(setTimeout(() => rule.classList.add('show'), 1000));
+          timers.push(setTimeout(() => text.classList.add('show'), 1350));
+          timers.push(setTimeout(() => {
+            btn.hidden = false;
+            revealNextFrame(() => btn.classList.add('show'));
+          }, 2400));
+          btn.addEventListener('click', advance);
+          timers.push(setTimeout(advance, 7500));
+        });
+    }
+
+    function runChapter(ch){
+      if (reduced){
+        renderScene(`
+          <div class="js-scene js-cap-scene">
+            <span class="js-cap-year show">${ch.year}</span>
+            <h3 class="js-cap-title show">${ch.title}</h3>
+            <p class="js-cap-text show">${ch.cap}</p>
+          </div>`);
+        timers.push(setTimeout(next, 1400));
+        return;
       }
-
-      playBtn.addEventListener('click', () => {
-        chapter.classList.add('watching');
-        try { video.currentTime = 0; } catch(e){}
-        video.play().catch(() => { chapter.classList.remove('watching'); });
-      });
-      video.addEventListener('ended', () => {
-        chapter.classList.remove('watching');
-        timers.push(setTimeout(advance, 900)); // a beat to enjoy it finishing
-      });
-      // no real clip at that path yet — fall back to a working sample
-      // rather than leave her staring at a broken player
-      source.addEventListener('error', () => {
-        source.src = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
-        video.load();
-      }, { once:true });
-
-      continueBtn.addEventListener('click', advance);
-
-      timers.push(setTimeout(() => {
-        continueBtn.hidden = false;
-        revealNextFrame(() => continueBtn.classList.add('show'));
-      }, 1300));
+      showDateScene(ch, () => showCaptionScene(ch, () => showVideoScene(ch, next)));
     }
 
     function next(){
       idx++;
-      if (idx >= chapters.length){ finish(); return; }
-      showChapter(idx);
-      setupChapter(chapters[idx]);
+      if (idx >= JOURNEY_CHAPTERS.length){ finish(); return; }
+      showDot(idx);
+      runChapter(JOURNEY_CHAPTERS[idx]);
     }
 
-    skip.onclick = finish;
-    if (reduced){ showChapter(chapters.length - 1); timers.push(setTimeout(finish, 1500)); return; }
     next();
   }
   function goJourney(){
@@ -579,7 +696,6 @@
   const cakeStage = $('cakeStage'), cakeBtn = $('cakeBtn');
   const cakeHint = $('cakeHint'), cakeSub = $('cakeSub');
   const cakeBlessing = $('cakeBlessing');
-  const wishPopup = $('wishPopup'), wishPopupText = $('wishPopupText');
   const wishDustEl = $('wishDust');
   const breathFill = $('breathRingFill');
   const wishStarEl = $('wishStar');
@@ -609,39 +725,29 @@
     if (wishDustTimer){ clearInterval(wishDustTimer); wishDustTimer = null; }
   }
 
-  function showPopup(text){
-    wishPopupText.textContent = text;
-    wishPopup.hidden = false;
-    wishPopup.classList.remove('out');
-  }
-  function hidePopup(){
-    wishPopup.classList.add('out');
-    setTimeout(() => { wishPopup.hidden = true; wishPopup.classList.remove('out'); }, 380);
-  }
-
-  // candles light -> close your eyes (5s) -> now open -> blow -> disappear -> onDone
+  // no on-screen instructions here — just the voice. the candles start
+  // dark, then a little spark of light travels over and catches each one
+  // in turn before the eyes-closed/wish/blow beats play out
   function startWishSequence(onDone){
     wishOnDone = onDone;
     cakeSub.textContent = 'lighting your candles…';
     startBirthdaySong();
 
-    setTimeout(() => { cakeStage.classList.add('lit'); startWishDust(); }, 500);
-    setTimeout(() => { cakeSub.textContent = 'twenty-three, and every one of them worth celebrating'; }, 1600);
+    setTimeout(() => { cakeStage.classList.add('candles-in'); }, 600);
+    setTimeout(() => { cakeStage.classList.add('lighting'); }, 1500);
+    setTimeout(() => { cakeStage.classList.add('candle1-flame'); }, 2620);
+    setTimeout(() => { cakeStage.classList.add('candle2-flame'); }, 3180);
+    setTimeout(() => { cakeStage.classList.add('lit'); startWishDust(); }, 4600);
+    setTimeout(() => { cakeSub.textContent = 'twenty-three, and every one of them worth celebrating'; }, 4800);
 
-    setTimeout(() => { showPopup('Close your eyes, and make a wish…'); speak('Close your eyes, and make a wish.'); }, 2200);
-    setTimeout(hidePopup, 7200);                       // exactly 5s with eyes closed
-
-    setTimeout(() => { showPopup('Now open your eyes…'); speak('Now open your eyes.'); }, 7500);
-    setTimeout(hidePopup, 9800);
-
+    setTimeout(() => { speak('Close your eyes, and make a wish.'); }, 5400);
+    setTimeout(() => { speak('Now open your eyes.'); }, 10700);
     setTimeout(() => {
-      showPopup('Press and hold the cake to blow them out 🎂');
       speak('Now, press and hold to blow out the candles.');
       canBlow = true;
       cakeBtn.disabled = false;
       cakeHint.textContent = 'press & hold to blow them out';
-    }, 10300);
-    setTimeout(hidePopup, 13300);
+    }, 13500);
   }
 
   // a single spark launches from the candles and arcs up across the sky —
@@ -683,7 +789,6 @@
     cakeStage.classList.remove('holding','blow-2','blow-3');
     cakeStage.classList.add('blown');
     cakeHint.textContent = '';
-    hidePopup();
     stopWishDust();
     setBreath(0);
 
@@ -859,18 +964,6 @@
       <div class="cd-stack">
         ${countdownCard('💍','Our Engagement','25 November 2026','2026-11-25T00:00:00','closer every second')}
         ${countdownCard('💒','Our Wedding','28 January 2027','2027-01-28T00:00:00','the day you become my wife')}
-      </div>` },
-    final: { icon:'🎁', title:'Final Surprise', html:`
-      <h3 class="final-heading">Happy 23rd Birthday, Piu</h3>
-      <div class="video-wrap">
-        <video controls playsinline id="finalVideo">
-          <source src="assets/video/birthday-wish.mp4" type="video/mp4">
-        </video>
-      </div>
-      <p class="video-note" id="videoNote">a little birthday wish, made for you</p>
-      <div class="modal-text">
-        <p>Every one of those five little surprises was true the day I wrote it, and it'll still be true on our fiftieth birthday together. Here's to this year, to us, and to every "first" we haven't had yet.</p>
-        <p style="text-align:center;"><strong>I love you, Piu. Happy Birthday. 🎂</strong></p>
       </div>` }
   };
 
@@ -891,34 +984,16 @@
       ${data.html}`;
     overlay.classList.add('open');
     modalBody.querySelectorAll('.cd-card').forEach(startCountdownCard);
-
-    const video = modalBody.querySelector('#finalVideo');
-    if (video){
-      video.addEventListener('error', () => {
-        video.querySelector('source').src =
-          'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
-        video.load();
-        const note = modalBody.querySelector('#videoNote');
-        if (note) note.textContent = 'sample clip — add assets/video/birthday-wish.mp4 with your own cartoon wish';
-      }, { once:true });
-    }
-    if (key === 'final'){
-      cannons();
-      setTimeout(() => burst(innerWidth/2, innerHeight*0.35, 80), 250);
-      for (let i=0;i<18;i++) setTimeout(() => spawnBalloon(true), i*100);
-    }
   }
   function closeModal(){
     overlay.classList.remove('open');
     const v = modalBody.querySelector('video');
     if (v) v.pause();
-    // closing the final surprise is the cue that she's ready for the
-    // real-world part of the gift
-    if (currentModalKey === 'final'){
-      currentModalKey = null;
-      setTimeout(goBoxSequence, 500);
-    } else {
-      currentModalKey = null;
+    const key = currentModalKey;
+    currentModalKey = null;
+    // closing a secret's modal moves on to the next one
+    if (SECRETS.some(s => s.key === key)){
+      setTimeout(nextSecret, 400);
     }
   }
   $('modalClose').addEventListener('click', closeModal);
@@ -1045,68 +1120,191 @@
     });
   }
 
-  /* ================= 6 · Five little secrets ================= */
+  /* ================= 6 · Five little secrets — one at a time, so there
+     is never anything to scroll to before or after scratching it ================= */
   const cardsSlide = $('cardsSlide');
-  const scratchCards = Array.from(cardsSlide.querySelectorAll('.scard'));
-  const progressCount = $('progressCount'), progressFill = $('progressFill');
-  let foundCount = 0, cardsStarted = false;
+  const secretsStage = $('secretsStage'), secretsEyebrow = $('secretsEyebrow');
+  const secretsDots = Array.from(cardsSlide.querySelectorAll('.secrets-dots .js-dot'));
+  const SECRETS = [
+    { key:'1', icon:'💌', label:'How We Met' },
+    { key:'2', icon:'💕', label:'What I Love<br>About You' },
+    { key:'3', icon:'📸', label:'Our Favourite<br>Memories' },
+    { key:'4', icon:'🤍', label:'A Promise<br>For Us' },
+    { key:'5', icon:'⏳', label:'Our Journey<br>Ahead' }
+  ];
+  let secretIdx = -1, cardsStarted = false;
+
+  (function spawnSecretsStars(){
+    const el = $('secretsStars');
+    if (!el || reduced) return;
+    for (let i=0;i<30;i++){
+      const s = document.createElement('span');
+      s.className = 'prelude-star';
+      s.style.left = (Math.random()*100)+'%';
+      s.style.top = (Math.random()*100)+'%';
+      s.style.animationDelay = (Math.random()*4)+'s';
+      s.style.animationDuration = (2.2+Math.random()*3)+'s';
+      el.appendChild(s);
+    }
+  })();
+
+  function secretCardHTML(s){
+    const plain = s.label.replace(/<br>/g, ' ');
+    return `
+      <div class="scard" data-card="${s.key}" tabindex="0" role="button" aria-label="${plain} — tap to reveal">
+        <div class="scard-inner">
+          <div class="scard-face scard-front">
+            <span class="scard-orn" aria-hidden="true">✦</span>
+            <span class="scard-icon">${s.icon}</span>
+            <span class="scard-label">${s.label}</span>
+            <span class="scard-tap">opening…</span>
+          </div>
+          <div class="scard-face scard-back">
+            <div class="scard-prize"><span class="scard-prize-icon">${s.icon}</span><span class="scard-prize-title">${plain}</span></div>
+            <div class="scratch-shine" aria-hidden="true"></div>
+            <canvas class="scratch"></canvas>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function showSecretDot(i){
+    secretsDots.forEach((d, di) => {
+      d.classList.toggle('active', di === i);
+      d.classList.toggle('done', di < i);
+    });
+  }
 
   function onSecretFound(card){
     if (card.dataset.found) return;
     card.dataset.found = '1';
     card.classList.add('done');
-    const badge = document.createElement('span');
-    badge.className = 'badge'; badge.textContent = '✓ found';
-    card.appendChild(badge);
-
-    foundCount++;
-    progressCount.textContent = foundCount;
-    progressFill.style.width = (foundCount/scratchCards.length*100)+'%';
-
     setTimeout(() => openModal(card.dataset.card), 550);
-
-    if (foundCount >= scratchCards.length){
-      setTimeout(goFinalTransition, 1400);
-    }
   }
-  scratchCards.forEach(c => wireScratchCard(c, onSecretFound));
+
+  function nextSecret(){
+    secretIdx++;
+    if (secretIdx >= SECRETS.length){ goFinalTransition(); return; }
+    const s = SECRETS[secretIdx];
+    secretsEyebrow.textContent = `secret ${secretIdx+1} of ${SECRETS.length}`;
+    showSecretDot(secretIdx);
+    secretsStage.innerHTML = secretCardHTML(s);
+    const card = secretsStage.querySelector('.scard');
+    revealCards([card]);
+    wireScratchCard(card, onSecretFound);
+    autoFlipCards([card], onSecretFound, 1000);
+  }
 
   function goCardsSlide(){
-    if (cardsStarted) { cardsSlide.hidden = false; return; }
-    cardsStarted = true;
     cardsSlide.hidden = false;
-    revealCards(scratchCards);
-    autoFlipCards(scratchCards, onSecretFound, 1100, 280);
+    if (cardsStarted) return;
+    cardsStarted = true;
+    nextSecret();
   }
 
   function goFinalTransition(){
     cardsSlide.hidden = true; // done with it — don't leave it stacked underneath
     showTransition(
-      ['Now comes the final surprise.',
+      ['Now comes one more.',
        'the one I saved for last.',
        ''],
-      'scratch to reveal',
+      'watch till the end',
       goFinalSlide
     );
   }
 
-  /* ================= 7 · Final surprise ================= */
+  /* ================= 7 · For You — a full-screen video that plays and
+     closes itself; nothing to tap shut, nothing to scroll to ================= */
   const finalSlide = $('finalSlide');
+  const finalStage = $('finalStage');
   const finalCardEl = finalSlide.querySelector('.scard');
   const finalSub = $('finalSub');
   let finalStarted = false;
 
+  (function spawnFinalStars(){
+    const el = $('finalStars');
+    if (!el || reduced) return;
+    for (let i=0;i<30;i++){
+      const s = document.createElement('span');
+      s.className = 'prelude-star';
+      s.style.left = (Math.random()*100)+'%';
+      s.style.top = (Math.random()*100)+'%';
+      s.style.animationDelay = (Math.random()*4)+'s';
+      s.style.animationDuration = (2.2+Math.random()*3)+'s';
+      el.appendChild(s);
+    }
+  })();
+
+  function showFinalVideo(){
+    finalStage.innerHTML = `
+      <div class="js-scene js-video-scene">
+        <div class="js-video-frame" id="finalVideoFrame">
+          <span class="js-video-frame-glow" aria-hidden="true"></span>
+          <span class="js-video-corner tl" aria-hidden="true"></span><span class="js-video-corner tr" aria-hidden="true"></span>
+          <span class="js-video-corner bl" aria-hidden="true"></span><span class="js-video-corner br" aria-hidden="true"></span>
+          <video class="js-video-el" id="finalVideoEl" playsinline controls>
+            <source src="assets/video/birthday-wish.mp4" type="video/mp4">
+          </video>
+          <button class="js-unmute" id="finalUnmute" hidden aria-label="Turn sound on">🔇</button>
+        </div>
+        <div class="final-video-caption">
+          <p class="js-cap-text" id="finalVideoText">I love you, Piu. Happy Birthday. 🎂</p>
+        </div>
+      </div>`;
+
+    const frame = $('finalVideoFrame'), video = $('finalVideoEl'), unmuteBtn = $('finalUnmute');
+    const caption = $('finalVideoText');
+    const source = video.querySelector('source');
+    let advanced = false;
+    const wasBgmPlaying = musicPlaying;
+    if (wasBgmPlaying) bgm.pause();
+
+    // the video ending IS the cue to move on — no button to close it
+    function advance(){
+      if (advanced) return;
+      advanced = true;
+      try { video.pause(); } catch(e){}
+      caption.classList.add('show');
+      setTimeout(() => {
+        if (wasBgmPlaying) bgm.play().catch(() => {});
+        finalSlide.classList.add('fading');
+        setTimeout(() => {
+          finalSlide.hidden = true;
+          finalSlide.classList.remove('fading');
+          goBoxSequence();
+        }, 800);
+      }, 2600);
+    }
+
+    video.addEventListener('ended', () => setTimeout(advance, 500));
+    video.addEventListener('playing', () => frame.classList.add('playing'));
+    // no real clip at that path yet — fall back to a working sample
+    // rather than leave her staring at a broken player
+    source.addEventListener('error', () => {
+      source.src = 'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4';
+      video.load();
+    }, { once:true });
+
+    setTimeout(() => frame.classList.add('show'), 60);
+
+    // try with sound; if the browser blocks that, fall back to muted
+    // autoplay with a one-tap way to turn the sound on
+    video.play().catch(() => {
+      video.muted = true;
+      unmuteBtn.hidden = false;
+      video.play().catch(() => {});
+    });
+    unmuteBtn.addEventListener('click', () => { video.muted = false; unmuteBtn.hidden = true; });
+
+    setTimeout(advance, 30000); // safety net if a clip never fires 'ended'
+  }
+
   // she just scratched it — let the reveal breathe for a few seconds
-  // before the modal takes over the screen, instead of slamming into it
+  // before the video takes over the whole screen
   function onFinalFound(card){
-    const originalSub = finalSub.textContent;
     finalSub.textContent = 'just a moment…';
     finalSub.classList.add('breathe');
-    setTimeout(() => {
-      finalSub.classList.remove('breathe');
-      finalSub.textContent = originalSub;
-      openModal('final');
-    }, 7000);
+    setTimeout(showFinalVideo, 7000);
   }
   wireScratchCard(finalCardEl, onFinalFound);
 
@@ -1122,6 +1320,20 @@
   /* ================= 8 · One more thing (a real box, a real gift) ================= */
   const boxSlide = $('boxSlide');
   const boxStage = $('boxStage');
+
+  (function spawnBoxStars(){
+    const el = $('boxStars');
+    if (!el || reduced) return;
+    for (let i=0;i<30;i++){
+      const s = document.createElement('span');
+      s.className = 'prelude-star';
+      s.style.left = (Math.random()*100)+'%';
+      s.style.top = (Math.random()*100)+'%';
+      s.style.animationDelay = (Math.random()*4)+'s';
+      s.style.animationDuration = (2.2+Math.random()*3)+'s';
+      el.appendChild(s);
+    }
+  })();
 
   const NUDGES = [
     "Take your time, love — I'll be right here. 🤍",
@@ -1210,13 +1422,12 @@
           <span class="chest-shine" aria-hidden="true"></span>
         </div>
         <div class="chest-reveal" id="chestReveal" hidden>
-          <div class="chest-message" id="chestMessage">
-            <p class="chest-msg-line l1">Not here, love.</p>
-            <p class="chest-msg-line l2">It's inside the little box I gave you.</p>
-            <p class="chest-msg-line l3 accent">Go on — open it. 🤍</p>
+          <div class="chest-note">
+            <span class="chest-note-quote" aria-hidden="true">❝</span>
+            <p class="chest-note-text">Not here, love — it's inside the little box I gave you. Go on, open it.<span class="chest-note-heart"> 🤍</span></p>
           </div>
           <button class="cel-btn chest-continue" id="chestContinue" hidden>
-            <span>I'm going to open it</span><span class="cel-btn-arrow">→</span>
+            <span>I'm on my way</span><span class="cel-btn-arrow">→</span>
           </button>
         </div>
       </div>`,
@@ -1237,12 +1448,10 @@
           revealNextFrame(() => reveal.classList.add('show'));
         }, 1900);
 
-        const lines = Array.from(reveal.querySelectorAll('.chest-msg-line'));
-        lines.forEach((l, i) => setTimeout(() => l.classList.add('show'), 2300 + i*650));
         setTimeout(() => {
           continueBtn.hidden = false;
           revealNextFrame(() => continueBtn.classList.add('show'));
-        }, 2300 + lines.length*650 + 250);
+        }, 3300);
 
         continueBtn.addEventListener('click', () => {
           if (boxSparkleTimer){ clearInterval(boxSparkleTimer); boxSparkleTimer = null; }
@@ -1393,22 +1602,46 @@
     }
   })();
 
-  // a last, unhurried note fades in on black, holds, then fades away —
-  // leaving her on a still, quiet dark screen. nothing more to tap or read.
+  // a last, unhurried note fades in on black, holds, ends on "The End." —
+  // then everything fades away, stars included, leaving pure black.
+  // nothing more to tap or read: that stillness is the actual ending.
   function goEpilogue(){
-    const slide = $('epilogueSlide'), inner = $('epilogueInner');
+    const slide = $('epilogueSlide'), wishes = $('epilogueWishes'),
+          endmark = $('epilogueEndmark'), stars = $('epilogueStars');
     slide.hidden = false;
-    const lines = Array.from(inner.querySelectorAll('.epilogue-line'));
+    const lines = Array.from(wishes.querySelectorAll('.epilogue-line'));
+
+    // beat 2 — "The End." arrives alone, only once the wishes have
+    // completely cleared away, then that too fades, stars included,
+    // into a screen with nothing left on it at all
+    function showEndmark(){
+      endmark.hidden = false;
+      revealNextFrame(() => endmark.classList.add('show'));
+      setTimeout(() => {
+        endmark.classList.remove('show');
+        endmark.classList.add('fade-out');
+        stars.classList.add('fade-out');
+      }, reduced ? 2600 : 4600);
+    }
+
     if (reduced){
       lines.forEach(l => l.classList.add('show'));
-      setTimeout(() => inner.classList.add('fade-out'), 4000);
+      setTimeout(() => {
+        wishes.classList.add('fade-out');
+        setTimeout(showEndmark, 700);
+      }, 3000);
       return;
     }
+
+    // beat 1 — the wishes, then a full fade before anything else appears
     let delay = 1000;
     lines.forEach((l, i) => {
       setTimeout(() => l.classList.add('show'), delay);
-      delay += (i === lines.length - 1) ? 2200 : 1900;
+      delay += (i === lines.length - 1) ? 2600 : 1900;
     });
-    setTimeout(() => inner.classList.add('fade-out'), delay + 3800);
+    delay += 3600; // hold on the last line before it clears
+    setTimeout(() => wishes.classList.add('fade-out'), delay);
+    delay += 2600; // wait for the wishes to be fully gone
+    setTimeout(showEndmark, delay);
   }
 })();

@@ -22,13 +22,6 @@
 <div class="balloons" id="balloons" aria-hidden="true"></div>
 <div class="floaters" id="floaters" aria-hidden="true"></div>
 
-<div class="controls">
-  <button id="themeToggle" class="ctrl-btn" aria-label="Toggle theme" title="Toggle theme">
-    <svg class="icon icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6" fill="none"/><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="12" y1="1.5" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22.5" y2="12"/><line x1="4.5" y1="4.5" x2="6.2" y2="6.2"/><line x1="17.8" y1="17.8" x2="19.5" y2="19.5"/><line x1="4.5" y1="19.5" x2="6.2" y2="17.8"/><line x1="17.8" y1="6.2" x2="19.5" y2="4.5"/></g></svg>
-    <svg class="icon icon-moon" viewBox="0 0 24 24" hidden><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>
-  </button>
-</div>
-
 <audio id="bgm" loop preload="none">
   <source src="assets/audio/song.mp3" type="audio/mpeg">
   <source src="assets/audio/songs.mp3" type="audio/mpeg">
@@ -98,16 +91,14 @@
 
 <!-- ============ 2 · CELEBRATION ============ -->
 <section id="celebrate" class="celebrate slide" hidden>
-  <div class="cel-rays" aria-hidden="true"></div>
+  <div class="cel-stars" id="celStars" aria-hidden="true"></div>
   <div class="cel-halo" aria-hidden="true"></div>
   <div class="cel-inner" id="celInner">
-    <p class="cel-eyebrow">✦ &nbsp;it's your day&nbsp; ✦</p>
+    <p class="cel-eyebrow">it's your day</p>
     <h1 class="cel-title" id="celTitle" data-text="HAPPY BIRTHDAY" aria-label="Happy Birthday"></h1>
     <div class="cel-name">Piu</div>
 
     <div class="age-badge" id="ageBadge">
-      <span class="age-ring"></span>
-      <span class="age-ring age-ring-2"></span>
       <span class="age-shock" aria-hidden="true"></span>
 
       <span class="age-locket" aria-label="23">
@@ -118,12 +109,57 @@
       </span>
 
       <span class="age-sparkle s1">✦</span>
-      <span class="age-sparkle s2">✦</span>
-      <span class="age-sparkle s3">✦</span>
-      <span class="age-sparkle s4">✧</span>
+      <span class="age-sparkle s2">✧</span>
     </div>
 
     <p class="age-caption" id="ageCaption">twenty&#8209;two, retired. twenty&#8209;three looks unfairly good on you.</p>
+
+    <div class="cel-bouquet" id="celBouquet" hidden>
+      <svg class="bouquet" viewBox="0 0 220 260" aria-hidden="true">
+        <defs>
+          <linearGradient id="stemG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8CAA6E"/><stop offset="100%" stop-color="#5C7A46"/>
+          </linearGradient>
+          <radialGradient id="budG" cx="35%" cy="30%">
+            <stop offset="0%" stop-color="#D8C6EE"/><stop offset="55%" stop-color="#A98BE0"/><stop offset="100%" stop-color="#7B5EA7"/>
+          </radialGradient>
+          <linearGradient id="ribbonG" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#F0CE86"/><stop offset="100%" stop-color="#D0A143"/>
+          </linearGradient>
+        </defs>
+
+        <g class="bq-stems">
+          <path class="bq-stem s1" d="M110 250 C 104 190, 70 150, 56 96" stroke="url(#stemG)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+          <path class="bq-stem s2" d="M110 250 C 108 186, 92 140, 86 82"  stroke="url(#stemG)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+          <path class="bq-stem s3" d="M110 250 C 110 184, 110 132, 110 70" stroke="url(#stemG)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+          <path class="bq-stem s4" d="M110 250 C 112 186, 128 140, 134 82" stroke="url(#stemG)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+          <path class="bq-stem s5" d="M110 250 C 116 190, 150 150, 164 96" stroke="url(#stemG)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+
+          <g class="bq-sprig sp1">
+            <ellipse cx="56" cy="96" rx="4.6" ry="8" fill="url(#budG)"/><ellipse cx="50" cy="104" rx="4" ry="7" fill="url(#budG)"/><ellipse cx="61" cy="107" rx="4" ry="7" fill="url(#budG)"/>
+            <ellipse cx="53" cy="88" rx="3.6" ry="6.4" fill="url(#budG)"/><ellipse cx="60" cy="89" rx="3.6" ry="6.4" fill="url(#budG)"/>
+          </g>
+          <g class="bq-sprig sp2">
+            <ellipse cx="86" cy="82" rx="4.8" ry="8.4" fill="url(#budG)"/><ellipse cx="80" cy="90" rx="4.2" ry="7.4" fill="url(#budG)"/><ellipse cx="91" cy="92" rx="4.2" ry="7.4" fill="url(#budG)"/>
+            <ellipse cx="83" cy="73" rx="3.8" ry="6.8" fill="url(#budG)"/><ellipse cx="90" cy="74" rx="3.8" ry="6.8" fill="url(#budG)"/>
+          </g>
+          <g class="bq-sprig sp3">
+            <ellipse cx="110" cy="70" rx="5.2" ry="9" fill="url(#budG)"/><ellipse cx="103" cy="78" rx="4.4" ry="7.8" fill="url(#budG)"/><ellipse cx="117" cy="78" rx="4.4" ry="7.8" fill="url(#budG)"/>
+            <ellipse cx="107" cy="59" rx="4" ry="7.2" fill="url(#budG)"/><ellipse cx="114" cy="59" rx="4" ry="7.2" fill="url(#budG)"/>
+          </g>
+          <g class="bq-sprig sp4">
+            <ellipse cx="134" cy="82" rx="4.8" ry="8.4" fill="url(#budG)"/><ellipse cx="128" cy="90" rx="4.2" ry="7.4" fill="url(#budG)"/><ellipse cx="139" cy="92" rx="4.2" ry="7.4" fill="url(#budG)"/>
+            <ellipse cx="131" cy="73" rx="3.8" ry="6.8" fill="url(#budG)"/><ellipse cx="138" cy="74" rx="3.8" ry="6.8" fill="url(#budG)"/>
+          </g>
+          <g class="bq-sprig sp5">
+            <ellipse cx="164" cy="96" rx="4.6" ry="8" fill="url(#budG)"/><ellipse cx="158" cy="104" rx="4" ry="7" fill="url(#budG)"/><ellipse cx="169" cy="107" rx="4" ry="7" fill="url(#budG)"/>
+            <ellipse cx="161" cy="88" rx="3.6" ry="6.4" fill="url(#budG)"/><ellipse cx="168" cy="89" rx="3.6" ry="6.4" fill="url(#budG)"/>
+          </g>
+        </g>
+
+        <path class="bq-ribbon" d="M92 244c-6-10-6-22 0-30 6 8 30 8 36 0 6 8 6 20 0 30" fill="none" stroke="url(#ribbonG)" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    </div>
 
     <button class="cel-btn" id="celContinue">
       <span>Come see what I made you</span>
@@ -144,147 +180,13 @@
   <button class="int-skip" id="transSkip" aria-label="Continue now">skip</button>
 </section>
 
-<!-- ============ 4 · HER JOURNEY (auto-playing zig-zag slideshow) ============ -->
+<!-- ============ 4 · HER JOURNEY (a cinematic, one-scene-at-a-time story) ============ -->
 <section id="journeySlide" class="journey-slide slide" hidden>
-  <div class="js-head">
-    <p class="hero-eyebrow">two thousand three &nbsp;—&nbsp; the twenty&#8209;fifth of january</p>
-    <h2 class="section-title">Twenty-three years of you</h2>
-  </div>
-
-  <div class="js-stage" id="jsStage">
-    <article class="js-chapter" data-i="1" data-year="2003">
-      <div class="js-photo">
-        <img src="assets/images/journey1.jpg" alt="Piu as a baby"
-             onerror="this.onerror=null;this.src='https://picsum.photos/seed/piu-j1/700/860';">
-        <video class="js-video" playsinline preload="none">
-          <source src="assets/video/journey1.mp4" type="video/mp4">
-        </video>
-        <button class="js-play" aria-label="Watch a little video from 2003">
-          <span class="js-play-ring"></span><span class="js-play-ring r2"></span>
-          <svg class="js-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-      </div>
-      <div class="js-info">
-        <span class="js-year">2003</span>
-        <h3 class="js-title">The Beginning</h3>
-        <p class="js-cap">The day the world quietly rearranged itself around one small, remarkable heartbeat — and got immeasurably better without asking anyone's permission.</p>
-        <p class="js-watch-hint">a little video from this year</p>
-        <button class="js-continue" hidden><span>continue</span><span class="js-continue-arrow">→</span></button>
-      </div>
-    </article>
-
-    <article class="js-chapter" data-i="2" data-year="2008">
-      <div class="js-photo">
-        <img src="assets/images/journey2.jpg" alt="Piu as a little girl"
-             onerror="this.onerror=null;this.src='https://picsum.photos/seed/piu-j2/700/860';">
-        <video class="js-video" playsinline preload="none">
-          <source src="assets/video/journey2.mp4" type="video/mp4">
-        </video>
-        <button class="js-play" aria-label="Watch a little video from 2008">
-          <span class="js-play-ring"></span><span class="js-play-ring r2"></span>
-          <svg class="js-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-      </div>
-      <div class="js-info">
-        <span class="js-year">2008</span>
-        <h3 class="js-title">Small, and Completely in Charge</h3>
-        <p class="js-cap">Tiny hands, enormous opinions, and a smile that already knew exactly what it was doing. Some things, it turns out, you're simply born knowing.</p>
-        <p class="js-watch-hint">a little video from this year</p>
-        <button class="js-continue" hidden><span>continue</span><span class="js-continue-arrow">→</span></button>
-      </div>
-    </article>
-
-    <article class="js-chapter" data-i="3" data-year="2014">
-      <div class="js-photo">
-        <img src="assets/images/journey3.jpg" alt="Piu during school years"
-             onerror="this.onerror=null;this.src='https://picsum.photos/seed/piu-j3/700/860';">
-        <video class="js-video" playsinline preload="none">
-          <source src="assets/video/journey3.mp4" type="video/mp4">
-        </video>
-        <button class="js-play" aria-label="Watch a little video from 2014">
-          <span class="js-play-ring"></span><span class="js-play-ring r2"></span>
-          <svg class="js-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-      </div>
-      <div class="js-info">
-        <span class="js-year">2014</span>
-        <h3 class="js-title">School Days</h3>
-        <p class="js-cap">Somewhere between these lessons and this laughter, you were quietly becoming the kindest person I would ever have the extraordinary luck of knowing.</p>
-        <p class="js-watch-hint">a little video from this year</p>
-        <button class="js-continue" hidden><span>continue</span><span class="js-continue-arrow">→</span></button>
-      </div>
-    </article>
-
-    <article class="js-chapter" data-i="4" data-year="2021">
-      <div class="js-photo">
-        <img src="assets/images/journey4.jpg" alt="Piu during the pandemic years"
-             onerror="this.onerror=null;this.src='https://picsum.photos/seed/piu-j4/700/860';">
-        <video class="js-video" playsinline preload="none">
-          <source src="assets/video/journey4.mp4" type="video/mp4">
-        </video>
-        <button class="js-play" aria-label="Watch a little video from 2021">
-          <span class="js-play-ring"></span><span class="js-play-ring r2"></span>
-          <svg class="js-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-      </div>
-      <div class="js-info">
-        <span class="js-year">2021</span>
-        <h3 class="js-title">The World Went Quiet</h3>
-        <p class="js-cap">Everything paused that year — the noise, the plans, the certainty. You didn't. You kept growing, gently, into exactly who you were always meant to become.</p>
-        <p class="js-watch-hint">a little video from this year</p>
-        <button class="js-continue" hidden><span>continue</span><span class="js-continue-arrow">→</span></button>
-      </div>
-    </article>
-
-    <article class="js-chapter" data-i="5" data-year="2023">
-      <div class="js-photo">
-        <img src="assets/images/journey5.jpg" alt="Piu in college"
-             onerror="this.onerror=null;this.src='https://picsum.photos/seed/piu-j5/700/860';">
-        <video class="js-video" playsinline preload="none">
-          <source src="assets/video/journey5.mp4" type="video/mp4">
-        </video>
-        <button class="js-play" aria-label="Watch a little video from 2023">
-          <span class="js-play-ring"></span><span class="js-play-ring r2"></span>
-          <svg class="js-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-      </div>
-      <div class="js-info">
-        <span class="js-year">2023</span>
-        <h3 class="js-title">Golden College Days</h3>
-        <p class="js-cap">Late nights, louder laughter, a thousand small adventures — the years quietly writing the story of the woman I would one day fall hopelessly, entirely for.</p>
-        <p class="js-watch-hint">a little video from this year</p>
-        <button class="js-continue" hidden><span>continue</span><span class="js-continue-arrow">→</span></button>
-      </div>
-    </article>
-
-    <article class="js-chapter" data-i="6" data-year="25 January 2026">
-      <div class="js-photo">
-        <img src="assets/images/journey6.jpg" alt="The day we met"
-             onerror="this.onerror=null;this.src='https://picsum.photos/seed/piu-j6/700/860';">
-        <video class="js-video" playsinline preload="none">
-          <source src="assets/video/journey6.mp4" type="video/mp4">
-        </video>
-        <button class="js-play" aria-label="Watch a little video from the day we met">
-          <span class="js-play-ring"></span><span class="js-play-ring r2"></span>
-          <svg class="js-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-      </div>
-      <div class="js-info">
-        <span class="js-year">25th January, 2026</span>
-        <h3 class="js-title">The Day You Walked In</h3>
-        <p class="js-cap">An ordinary Sunday, and then — quite without warning — my whole life quietly rearranged itself around you. Months later, I still haven't worked out how I got this lucky.</p>
-        <p class="js-watch-hint">a little video from this day</p>
-        <button class="js-continue" hidden><span>continue</span><span class="js-continue-arrow">→</span></button>
-      </div>
-    </article>
-  </div>
-
+  <div class="js-cinema" id="jsCinema"></div>
   <div class="js-dots" id="jsDots" aria-hidden="true">
     <span class="js-dot"></span><span class="js-dot"></span><span class="js-dot"></span>
     <span class="js-dot"></span><span class="js-dot"></span><span class="js-dot"></span>
   </div>
-
-  <button class="int-skip js-skip" id="jsSkip" aria-label="Continue now">skip</button>
 </section>
 
 <!-- ============ 5 · MAKE A WISH ============ -->
@@ -295,7 +197,6 @@
   <div class="cake-stage" id="cakeStage">
     <span class="cake-spotlight" aria-hidden="true"></span>
     <span class="wish-dust" id="wishDust" aria-hidden="true"></span>
-    <div class="wish-popup" id="wishPopup" hidden><p id="wishPopupText"></p></div>
 
     <div class="wish-orbs" aria-hidden="true">
       <span class="w-orb o1"></span>
@@ -311,55 +212,54 @@
     <div class="wind-streaks" aria-hidden="true"><span></span><span></span><span></span></div>
 
     <button class="cake-btn" id="cakeBtn" aria-label="Press and hold to blow out the candles" disabled>
+      <span class="cake-lighter" id="cakeLighter" aria-hidden="true">
+        <span class="lighter-spark s1"></span>
+        <span class="lighter-spark s2"></span>
+        <span class="lighter-spark s3"></span>
+      </span>
+      <span class="cake-blowflash c1" aria-hidden="true"></span>
+      <span class="cake-blowflash c2" aria-hidden="true"></span>
       <svg class="cake-svg" viewBox="0 0 240 250" role="img" aria-label="Birthday cake with number 23 candles">
         <defs>
-          <linearGradient id="tierA" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#FCE7F0"/><stop offset="100%" stop-color="#D98CB0"/>
+          <linearGradient id="tierWine" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#A5637F"/><stop offset="100%" stop-color="#4A2138"/>
           </linearGradient>
-          <linearGradient id="tierB" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#FBEBDC"/><stop offset="100%" stop-color="#DCAE86"/>
+          <linearGradient id="tierGold" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#F0DFB8"/><stop offset="100%" stop-color="#C9A366"/>
           </linearGradient>
-          <linearGradient id="plateG" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#8A6BB0"/><stop offset="50%" stop-color="#E8CE93"/><stop offset="100%" stop-color="#8A6BB0"/>
+          <linearGradient id="trimGold" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#B9873A"/><stop offset="50%" stop-color="#FFE3A3"/><stop offset="100%" stop-color="#B9873A"/>
           </linearGradient>
           <linearGradient id="candleG" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#FFF6FA"/><stop offset="100%" stop-color="#E7B6CE"/>
+            <stop offset="0%" stop-color="#FFF3D6"/><stop offset="100%" stop-color="#E3C077"/>
           </linearGradient>
         </defs>
 
         <g class="candles" id="candles">
           <g class="candle" transform="translate(101,0)">
             <text class="num-candle" x="0" y="78" text-anchor="middle">2</text>
-            <line class="wick" x1="0" y1="35" x2="0" y2="42" stroke="#4A3628" stroke-width="1.8"/>
+            <line class="wick" x1="0" y1="35" x2="0" y2="42" stroke="#4A3628" stroke-width="1.5"/>
             <g class="flame"><ellipse cx="0" cy="29" rx="4.9" ry="7.8" fill="#FFC46B"/><ellipse cx="0" cy="30.6" rx="2.4" ry="4.4" fill="#FFF6D6"/></g>
             <g class="smoke"><circle cx="0" cy="27" r="3" fill="#cfc6c0"/></g>
           </g>
           <g class="candle" transform="translate(139,0)">
             <text class="num-candle" x="0" y="78" text-anchor="middle">3</text>
-            <line class="wick" x1="0" y1="35" x2="0" y2="42" stroke="#4A3628" stroke-width="1.8"/>
+            <line class="wick" x1="0" y1="35" x2="0" y2="42" stroke="#4A3628" stroke-width="1.5"/>
             <g class="flame"><ellipse cx="0" cy="29" rx="4.9" ry="7.8" fill="#FFC46B"/><ellipse cx="0" cy="30.6" rx="2.4" ry="4.4" fill="#FFF6D6"/></g>
             <g class="smoke"><circle cx="0" cy="27" r="3" fill="#cfc6c0"/></g>
           </g>
         </g>
 
-        <rect x="80" y="78" width="80" height="42" rx="9" fill="url(#tierA)"/>
-        <path d="M80 88c9 0 9 10 18 10s9-10 18-10 9 10 18 10 9-10 18-10 8 8 8 8v-10H80z" fill="#FFF8F1" opacity=".95"/>
+        <rect x="80" y="78" width="80" height="42" rx="4" fill="url(#tierWine)"/>
+        <rect x="80" y="78" width="80" height="2.4" rx="1.2" fill="url(#trimGold)"/>
 
-        <rect x="62" y="120" width="116" height="42" rx="10" fill="url(#tierB)"/>
-        <path d="M62 128c10 0 10 10 20 10s10-10 20-10 10 10 20 10 10-10 20-10 10 10 16 10v-10H62z" fill="#FFF8F1" opacity=".95"/>
-        <g class="cake-dots">
-          <circle cx="84" cy="148" r="2.8"/><circle cx="108" cy="152" r="2.8"/>
-          <circle cx="132" cy="148" r="2.8"/><circle cx="156" cy="152" r="2.8"/>
-        </g>
+        <rect x="62" y="120" width="116" height="42" rx="4" fill="url(#tierGold)"/>
+        <rect x="62" y="120" width="116" height="2.4" rx="1.2" fill="url(#trimGold)"/>
 
-        <rect x="44" y="162" width="152" height="46" rx="11" fill="url(#tierA)"/>
-        <path d="M44 170c10 0 10 11 21 11s11-11 21-11 11 11 21 11 11-11 21-11 11 11 21 11 11-11 24-11v-9H44z" fill="#FFF8F1" opacity=".95"/>
-        <g class="cake-dots">
-          <circle cx="70" cy="192" r="3.1"/><circle cx="100" cy="196" r="3.1"/>
-          <circle cx="130" cy="192" r="3.1"/><circle cx="160" cy="196" r="3.1"/>
-        </g>
+        <rect x="44" y="162" width="152" height="46" rx="5" fill="url(#tierWine)"/>
+        <rect x="44" y="162" width="152" height="2.4" rx="1.2" fill="url(#trimGold)"/>
 
-        <ellipse cx="120" cy="210" rx="98" ry="9" fill="url(#plateG)"/>
+        <ellipse cx="120" cy="210" rx="98" ry="6" fill="none" stroke="url(#trimGold)" stroke-width="2.2"/>
       </svg>
       <span class="cake-glow" id="cakeGlow" aria-hidden="true"></span>
     </button>
@@ -373,173 +273,52 @@
 
 <!-- ============ 6 · FIVE LITTLE SECRETS ============ -->
 <section id="cardsSlide" class="cards-slide slide" hidden>
+  <div class="secrets-stars" id="secretsStars" aria-hidden="true"></div>
+  <p class="secrets-eyebrow" id="secretsEyebrow">secret 1 of 5</p>
   <h2 class="section-title">Five little secrets</h2>
-  <p class="section-sub">scratch each card to open your surprise —
-    <span id="progressCount">0</span> of 5 found</p>
-  <div class="progress-rail"><div class="progress-rail-fill" id="progressFill"></div></div>
-
-  <div class="card-grid" id="cardGrid">
-
-    <div class="scard" data-card="1" tabindex="0" role="button" aria-label="How We Met — tap to reveal">
-      <div class="scard-inner">
-        <div class="scard-face scard-front">
-          <span class="scard-orn" aria-hidden="true">✦</span>
-          <span class="scard-icon">💌</span>
-          <span class="scard-label">How We Met</span>
-          <span class="scard-tap">opening…</span>
-        </div>
-        <div class="scard-face scard-back">
-          <div class="scard-prize"><span class="scard-prize-icon">💌</span><span class="scard-prize-title">How We Met</span></div>
-          <div class="scratch-shine" aria-hidden="true"></div>
-          <canvas class="scratch"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="scard" data-card="2" tabindex="0" role="button" aria-label="What I Love About You — tap to reveal">
-      <div class="scard-inner">
-        <div class="scard-face scard-front">
-          <span class="scard-orn" aria-hidden="true">✦</span>
-          <span class="scard-icon">💕</span>
-          <span class="scard-label">What I Love<br>About You</span>
-          <span class="scard-tap">opening…</span>
-        </div>
-        <div class="scard-face scard-back">
-          <div class="scard-prize"><span class="scard-prize-icon">💕</span><span class="scard-prize-title">What I Love About You</span></div>
-          <div class="scratch-shine" aria-hidden="true"></div>
-          <canvas class="scratch"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="scard" data-card="3" tabindex="0" role="button" aria-label="Our Favourite Memories — tap to reveal">
-      <div class="scard-inner">
-        <div class="scard-face scard-front">
-          <span class="scard-orn" aria-hidden="true">✦</span>
-          <span class="scard-icon">📸</span>
-          <span class="scard-label">Our Favourite<br>Memories</span>
-          <span class="scard-tap">opening…</span>
-        </div>
-        <div class="scard-face scard-back">
-          <div class="scard-prize"><span class="scard-prize-icon">📸</span><span class="scard-prize-title">Our Favourite Memories</span></div>
-          <div class="scratch-shine" aria-hidden="true"></div>
-          <canvas class="scratch"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="scard" data-card="4" tabindex="0" role="button" aria-label="A Promise For Us — tap to reveal">
-      <div class="scard-inner">
-        <div class="scard-face scard-front">
-          <span class="scard-orn" aria-hidden="true">✦</span>
-          <span class="scard-icon">🤍</span>
-          <span class="scard-label">A Promise<br>For Us</span>
-          <span class="scard-tap">opening…</span>
-        </div>
-        <div class="scard-face scard-back">
-          <div class="scard-prize"><span class="scard-prize-icon">🤍</span><span class="scard-prize-title">A Promise For Us</span></div>
-          <div class="scratch-shine" aria-hidden="true"></div>
-          <canvas class="scratch"></canvas>
-        </div>
-      </div>
-    </div>
-
-    <div class="scard" data-card="5" tabindex="0" role="button" aria-label="Our Journey Ahead — tap to reveal">
-      <div class="scard-inner">
-        <div class="scard-face scard-front">
-          <span class="scard-orn" aria-hidden="true">✦</span>
-          <span class="scard-icon">⏳</span>
-          <span class="scard-label">Our Journey<br>Ahead</span>
-          <span class="scard-tap">opening…</span>
-        </div>
-        <div class="scard-face scard-back">
-          <div class="scard-prize"><span class="scard-prize-icon">⏳</span><span class="scard-prize-title">Our Journey Ahead</span></div>
-          <div class="scratch-shine" aria-hidden="true"></div>
-          <canvas class="scratch"></canvas>
-        </div>
-      </div>
-    </div>
+  <div class="secrets-stage" id="secretsStage"></div>
+  <div class="js-dots secrets-dots" id="secretsDots" aria-hidden="true">
+    <span class="js-dot"></span><span class="js-dot"></span><span class="js-dot"></span>
+    <span class="js-dot"></span><span class="js-dot"></span>
   </div>
 </section>
 
-<!-- ============ 7 · FINAL SURPRISE (also a scratch card) ============ -->
+<!-- ============ 7 · FOR YOU (a birthday video message) ============ -->
 <section id="finalSlide" class="final-slide slide" hidden>
-  <h2 class="section-title">The Final Surprise</h2>
-  <p class="section-sub" id="finalSub">the one I saved for last</p>
+  <div class="final-stars" id="finalStars" aria-hidden="true"></div>
+  <div class="final-stage" id="finalStage">
+    <h2 class="section-title">For You, Piu</h2>
+    <p class="section-sub" id="finalSub">one last thing, before we go</p>
 
-  <div class="card-grid final-grid">
-    <div class="scard scard-grand" data-card="final" tabindex="0" role="button" aria-label="Final Surprise — tap to reveal">
-      <div class="scard-inner">
-        <div class="scard-face scard-front">
-          <span class="scard-orn" aria-hidden="true">✦</span>
-          <span class="scard-icon">🎁</span>
-          <span class="scard-label">Final Surprise</span>
-          <span class="scard-tap">opening…</span>
-        </div>
-        <div class="scard-face scard-back">
-          <div class="scard-prize"><span class="scard-prize-icon">🎁</span><span class="scard-prize-title">Final Surprise</span></div>
-          <div class="scratch-shine" aria-hidden="true"></div>
-          <canvas class="scratch"></canvas>
+    <div class="secrets-stage">
+      <div class="scard scard-grand" data-card="final" tabindex="0" role="button" aria-label="For You — tap to reveal">
+        <div class="scard-inner">
+          <div class="scard-face scard-front">
+            <span class="scard-orn" aria-hidden="true">✦</span>
+            <span class="scard-icon">🎁</span>
+            <span class="scard-label">For You</span>
+            <span class="scard-tap">opening…</span>
+          </div>
+          <div class="scard-face scard-back">
+            <div class="scard-prize"><span class="scard-prize-icon">🎁</span><span class="scard-prize-title">For You</span></div>
+            <div class="scratch-shine" aria-hidden="true"></div>
+            <canvas class="scratch"></canvas>
+          </div>
         </div>
       </div>
     </div>
   </div>
-
 </section>
 
 <!-- ============ 8 · ONE MORE THING (a real box, a real watch) ============ -->
 <section id="boxSlide" class="box-slide slide" hidden>
+  <div class="box-stars" id="boxStars" aria-hidden="true"></div>
   <div id="boxStage" class="box-stage"></div>
 </section>
 
 <!-- ============ 9 · THE ENDING ============ -->
 <section id="endingSlide" class="ending-slide slide" hidden>
   <div class="ending-petals" id="endingPetals" aria-hidden="true"></div>
-
-  <svg class="bouquet" viewBox="0 0 220 260" aria-hidden="true">
-    <defs>
-      <linearGradient id="stemG" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#8CAA6E"/><stop offset="100%" stop-color="#5C7A46"/>
-      </linearGradient>
-      <radialGradient id="budG" cx="35%" cy="30%">
-        <stop offset="0%" stop-color="#D8C6EE"/><stop offset="55%" stop-color="#A98BE0"/><stop offset="100%" stop-color="#7B5EA7"/>
-      </radialGradient>
-      <linearGradient id="ribbonG" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#F0CE86"/><stop offset="100%" stop-color="#D0A143"/>
-      </linearGradient>
-    </defs>
-
-    <g class="bq-stems">
-      <path class="bq-stem s1" d="M110 250 C 104 190, 70 150, 56 96" stroke="url(#stemG)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
-      <path class="bq-stem s2" d="M110 250 C 108 186, 92 140, 86 82"  stroke="url(#stemG)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
-      <path class="bq-stem s3" d="M110 250 C 110 184, 110 132, 110 70" stroke="url(#stemG)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
-      <path class="bq-stem s4" d="M110 250 C 112 186, 128 140, 134 82" stroke="url(#stemG)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
-      <path class="bq-stem s5" d="M110 250 C 116 190, 150 150, 164 96" stroke="url(#stemG)" stroke-width="3.4" fill="none" stroke-linecap="round"/>
-
-      <g class="bq-sprig sp1">
-        <ellipse cx="56" cy="96" rx="4.6" ry="8" fill="url(#budG)"/><ellipse cx="50" cy="104" rx="4" ry="7" fill="url(#budG)"/><ellipse cx="61" cy="107" rx="4" ry="7" fill="url(#budG)"/>
-        <ellipse cx="53" cy="88" rx="3.6" ry="6.4" fill="url(#budG)"/><ellipse cx="60" cy="89" rx="3.6" ry="6.4" fill="url(#budG)"/>
-      </g>
-      <g class="bq-sprig sp2">
-        <ellipse cx="86" cy="82" rx="4.8" ry="8.4" fill="url(#budG)"/><ellipse cx="80" cy="90" rx="4.2" ry="7.4" fill="url(#budG)"/><ellipse cx="91" cy="92" rx="4.2" ry="7.4" fill="url(#budG)"/>
-        <ellipse cx="83" cy="73" rx="3.8" ry="6.8" fill="url(#budG)"/><ellipse cx="90" cy="74" rx="3.8" ry="6.8" fill="url(#budG)"/>
-      </g>
-      <g class="bq-sprig sp3">
-        <ellipse cx="110" cy="70" rx="5.2" ry="9" fill="url(#budG)"/><ellipse cx="103" cy="78" rx="4.4" ry="7.8" fill="url(#budG)"/><ellipse cx="117" cy="78" rx="4.4" ry="7.8" fill="url(#budG)"/>
-        <ellipse cx="107" cy="59" rx="4" ry="7.2" fill="url(#budG)"/><ellipse cx="114" cy="59" rx="4" ry="7.2" fill="url(#budG)"/>
-      </g>
-      <g class="bq-sprig sp4">
-        <ellipse cx="134" cy="82" rx="4.8" ry="8.4" fill="url(#budG)"/><ellipse cx="128" cy="90" rx="4.2" ry="7.4" fill="url(#budG)"/><ellipse cx="139" cy="92" rx="4.2" ry="7.4" fill="url(#budG)"/>
-        <ellipse cx="131" cy="73" rx="3.8" ry="6.8" fill="url(#budG)"/><ellipse cx="138" cy="74" rx="3.8" ry="6.8" fill="url(#budG)"/>
-      </g>
-      <g class="bq-sprig sp5">
-        <ellipse cx="164" cy="96" rx="4.6" ry="8" fill="url(#budG)"/><ellipse cx="158" cy="104" rx="4" ry="7" fill="url(#budG)"/><ellipse cx="169" cy="107" rx="4" ry="7" fill="url(#budG)"/>
-        <ellipse cx="161" cy="88" rx="3.6" ry="6.4" fill="url(#budG)"/><ellipse cx="168" cy="89" rx="3.6" ry="6.4" fill="url(#budG)"/>
-      </g>
-    </g>
-
-    <path class="bq-ribbon" d="M92 244c-6-10-6-22 0-30 6 8 30 8 36 0 6 8 6 20 0 30" fill="none" stroke="url(#ribbonG)" stroke-width="5" stroke-linecap="round"/>
-  </svg>
 
   <p class="ending-eyebrow">twenty-three, and endlessly loved</p>
   <h2 class="ending-title">Happy Birthday, my Piu</h2>
@@ -552,14 +331,17 @@
   </footer>
 </section>
 
-<!-- ============ 10 · EPILOGUE (fades to a quiet black screen) ============ -->
+<!-- ============ 10 · EPILOGUE (a closing line, then its own "The End", then just black) ============ -->
 <section id="epilogueSlide" class="epilogue slide" hidden>
   <div class="epilogue-stars" id="epilogueStars" aria-hidden="true"></div>
-  <div class="epilogue-inner" id="epilogueInner">
+  <div class="epilogue-wishes" id="epilogueWishes">
     <p class="epilogue-line l1">Wishing you all the very best</p>
     <p class="epilogue-line l2">for this next beautiful chapter of your life.</p>
     <p class="epilogue-line l3">I hope this made you smile — even just a little.</p>
     <p class="epilogue-line l4 accent">I love you, endlessly.</p>
+  </div>
+  <div class="epilogue-endmark" id="epilogueEndmark" hidden>
+    <p class="epilogue-end-text">The End.</p>
   </div>
 </section>
 
