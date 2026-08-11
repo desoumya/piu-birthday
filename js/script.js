@@ -337,11 +337,33 @@
     }
   })();
 
+  // a few hearts and petals drifting slowly upward — quiet, romantic,
+  // never competing with the words
+  (function spawnPreludeHearts(){
+    const el = $('preludeHearts');
+    if (!el || reduced) return;
+    const marks = ['♥','❀'];
+    for (let i=0;i<10;i++){
+      const s = document.createElement('span');
+      s.className = 'prelude-heart';
+      s.textContent = marks[Math.floor(Math.random()*marks.length)];
+      s.style.left = (Math.random()*100)+'%';
+      s.style.fontSize = (10+Math.random()*10)+'px';
+      s.style.setProperty('--ph-x', (Math.random()*70-35)+'px');
+      s.style.setProperty('--ph-r', (Math.random()*40-20)+'deg');
+      s.style.animationDuration = (9+Math.random()*8)+'s';
+      s.style.animationDelay = (Math.random()*6)+'s';
+      el.appendChild(s);
+    }
+  })();
+
   function runPrelude(){
     const lines = Array.from(prelude.querySelectorAll('.prelude-line'));
+    const flourish = $('preludeFlourish');
     const btn = $('preludeBegin');
     if (reduced){
       lines.forEach(l => l.classList.add('show'));
+      flourish.classList.add('show');
       btn.hidden = false;
       btn.classList.add('show');
       return;
@@ -349,6 +371,8 @@
     let delay = 700;
     lines.forEach((l, i) => {
       setTimeout(() => l.classList.add('show'), delay);
+      // the little heart flourish blooms in just before the final line
+      if (i === lines.length - 2) setTimeout(() => flourish.classList.add('show'), delay + 900);
       delay += (i === lines.length - 1) ? 1500 : 2000;
     });
     setTimeout(() => {
@@ -583,16 +607,20 @@
             <video class="js-video-el" id="jsVideoEl" playsinline${ch.poster ? ` poster="${ch.poster}"` : ''}>
               <source src="${ch.video}" type="video/mp4">
             </video>
-            <button class="js-unmute" id="jsUnmute" hidden aria-label="Turn sound on">🔇</button>
+            <button class="js-play-btn" id="jsPlayBtn" aria-label="Watch this memory">
+              <span class="js-play-ring" aria-hidden="true"></span><span class="js-play-ring r2" aria-hidden="true"></span>
+              <svg class="js-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <p class="js-play-hint" id="jsPlayHint">tap to watch</p>
           </div>
         </div>`,
         () => {
-          const frame = $('jsVideoFrame'), video = $('jsVideoEl'), unmuteBtn = $('jsUnmute');
+          const frame = $('jsVideoFrame'), video = $('jsVideoEl');
+          const playBtn = $('jsPlayBtn'), hint = $('jsPlayHint');
           const source = video.querySelector('source');
           currentVideo = video;
           let advanced = false;
           const wasBgmPlaying = musicPlaying;
-          if (wasBgmPlaying) bgm.pause();
 
           function advance(){
             if (advanced) return;
@@ -614,17 +642,19 @@
 
           timers.push(setTimeout(() => frame.classList.add('show'), 60));
 
-          // try with sound; if the browser blocks that, fall back to a
-          // muted autoplay and let her tap once to turn the sound on —
-          // she's never stuck looking at a video that refuses to start
-          video.play().catch(() => {
-            video.muted = true;
-            unmuteBtn.hidden = false;
+          // she's asked, never auto-started — a tap begins it
+          function startWatching(){
+            if (advanced) return;
+            if (wasBgmPlaying) bgm.pause();
+            playBtn.classList.add('hide');
+            hint.classList.add('hide');
             video.play().catch(() => {});
-          });
-          unmuteBtn.addEventListener('click', () => { video.muted = false; unmuteBtn.hidden = true; });
+          }
+          playBtn.addEventListener('click', startWatching);
 
-          timers.push(setTimeout(advance, 22000)); // safety net if a clip never fires 'ended'
+          // if she wanders off without ever tapping play, don't strand
+          // the story here forever
+          timers.push(setTimeout(() => { if (video.paused) advance(); }, 45000));
         });
     }
 
@@ -725,29 +755,37 @@
     if (wishDustTimer){ clearInterval(wishDustTimer); wishDustTimer = null; }
   }
 
-  // no on-screen instructions here — just the voice. the candles start
-  // dark, then a little spark of light travels over and catches each one
-  // in turn before the eyes-closed/wish/blow beats play out
+  // no on-screen instructions here — just the voice. the cake builds
+  // itself tier by tier, gets iced, the candles arrive, and a hand with
+  // a lit lighter comes in to catch each flame in turn — before the
+  // eyes-closed/wish/blow beats play out
   function startWishSequence(onDone){
     wishOnDone = onDone;
-    cakeSub.textContent = 'lighting your candles…';
+    cakeSub.textContent = '';
     startBirthdaySong();
 
-    setTimeout(() => { cakeStage.classList.add('candles-in'); }, 600);
-    setTimeout(() => { cakeStage.classList.add('lighting'); }, 1500);
-    setTimeout(() => { cakeStage.classList.add('candle1-flame'); }, 2620);
-    setTimeout(() => { cakeStage.classList.add('candle2-flame'); }, 3180);
-    setTimeout(() => { cakeStage.classList.add('lit'); startWishDust(); }, 4600);
-    setTimeout(() => { cakeSub.textContent = 'twenty-three, and every one of them worth celebrating'; }, 4800);
+    setTimeout(() => { cakeStage.classList.add('tier1-in'); }, 300);
+    setTimeout(() => { cakeStage.classList.add('tier2-in'); }, 1150);
+    setTimeout(() => { cakeStage.classList.add('tier3-in'); }, 2000);
+    setTimeout(() => { cakeStage.classList.add('icing-on'); }, 2850);
+    setTimeout(() => {
+      cakeStage.classList.add('candles-in');
+      cakeSub.textContent = 'lighting your candles…';
+    }, 4000);
+    setTimeout(() => { cakeStage.classList.add('hand-in'); }, 4700);
+    setTimeout(() => { cakeStage.classList.add('candle1-flame'); }, 5700);
+    setTimeout(() => { cakeStage.classList.add('candle2-flame'); }, 6500);
+    setTimeout(() => { cakeStage.classList.add('lit'); startWishDust(); }, 7700);
+    setTimeout(() => { cakeSub.textContent = 'twenty-three, and every one of them worth celebrating'; }, 7900);
 
-    setTimeout(() => { speak('Close your eyes, and make a wish.'); }, 5400);
-    setTimeout(() => { speak('Now open your eyes.'); }, 10700);
+    setTimeout(() => { speak('Close your eyes, and make a wish.'); }, 8500);
+    setTimeout(() => { speak('Now open your eyes.'); }, 13800);
     setTimeout(() => {
       speak('Now, press and hold to blow out the candles.');
       canBlow = true;
       cakeBtn.disabled = false;
       cakeHint.textContent = 'press & hold to blow them out';
-    }, 13500);
+    }, 16600);
   }
 
   // a single spark launches from the candles and arcs up across the sky —
@@ -1562,10 +1600,100 @@
         setTimeout(() => {
           endingSlide.hidden = true;
           endingSlide.classList.remove('fading');
-          goEpilogue();
+          goMemories(goEpilogue);
         }, 1000);
       }, reduced ? 3000 : 11000);
     }, 800);
+  }
+
+  // a little look back — the same photos from her journey, flashing past
+  // on their own, one last time, before the very last screen
+  (function spawnMemoriesStars(){
+    const el = $('memoriesStars');
+    if (!el || reduced) return;
+    for (let i=0;i<30;i++){
+      const s = document.createElement('span');
+      s.className = 'prelude-star';
+      s.style.left = (Math.random()*100)+'%';
+      s.style.top = (Math.random()*100)+'%';
+      s.style.animationDelay = (Math.random()*4)+'s';
+      s.style.animationDuration = (2.2+Math.random()*3)+'s';
+      el.appendChild(s);
+    }
+  })();
+
+  function goMemories(onNext){
+    const slide = $('memoriesSlide');
+    const imgs = [$('memoriesImgA'), $('memoriesImgB')];
+    const dots = Array.from(slide.querySelectorAll('.memories-dots .js-dot'));
+    const nextBtn = $('memoriesNextBtn');
+    const prevBtn = $('memoriesPrevBtn');
+    const continueBtn = $('memoriesContinueBtn');
+    const sources = [1,2,3,4,5,6].map(n => 'assets/images/journey' + n + '.jpg');
+    const fallbacks = [1,2,3,4,5,6].map(n => 'https://picsum.photos/seed/piu-j' + n + '/700/860');
+    slide.hidden = false;
+    slide.classList.remove('at-end');
+    continueBtn.classList.remove('show');
+    let idx = -1, active = 0, advanceTimer = null, ended = false;
+
+    function showDot(i){
+      dots.forEach((d, di) => {
+        d.classList.toggle('active', di === i);
+        d.classList.toggle('done', di < i);
+      });
+    }
+    function preload(src, fallback, cb){
+      const test = new Image();
+      test.onload = () => cb(src);
+      test.onerror = () => cb(fallback);
+      test.src = src;
+    }
+    function clearAuto(){
+      if (advanceTimer){ clearTimeout(advanceTimer); advanceTimer = null; }
+    }
+    // she reaches the last photo and the montage waits here — nothing
+    // sweeps her onward until she chooses to continue
+    function finish(){
+      ended = true;
+      slide.classList.add('at-end');
+      revealNextFrame(() => continueBtn.classList.add('show'));
+    }
+    // shows photo i and, once it's loaded, quietly resumes the auto-flash
+    // from there — used by the auto-timer as well as both arrows
+    function render(i){
+      idx = i;
+      showDot(idx);
+      prevBtn.classList.toggle('disabled', idx <= 0);
+      const showImg = imgs[active], hideImg = imgs[1 - active];
+      preload(sources[idx], fallbacks[idx], src => {
+        showImg.src = src;
+        showImg.classList.add('show');
+        hideImg.classList.remove('show');
+        active = 1 - active;
+        clearAuto();
+        advanceTimer = setTimeout(next, reduced ? 700 : 1800);
+      });
+    }
+    function next(){
+      if (idx + 1 >= sources.length){ clearAuto(); setTimeout(finish, reduced ? 200 : 500); return; }
+      render(idx + 1);
+    }
+    function prev(){
+      if (idx <= 0) return;
+      if (ended){ ended = false; slide.classList.remove('at-end'); continueBtn.classList.remove('show'); }
+      render(idx - 1);
+    }
+    nextBtn.onclick = next;
+    prevBtn.onclick = prev;
+    continueBtn.onclick = () => {
+      slide.classList.add('fading');
+      setTimeout(() => {
+        slide.hidden = true;
+        slide.classList.remove('fading');
+        onNext();
+      }, 800);
+    };
+    render(0);
   }
 
   function startEndingPetals(){

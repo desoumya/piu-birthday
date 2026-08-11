@@ -166,20 +166,44 @@ h1,h2{ font-family: var(--display); font-weight:500; margin:0; }
 .prelude-vignette{
   position:absolute; inset:0; z-index:0; pointer-events:none;
   background: radial-gradient(circle at 50% 40%, rgba(226,83,127,.10), transparent 62%);
+  animation: preludeGlowBreathe 7s ease-in-out infinite;
+}
+@keyframes preludeGlowBreathe{ 0%,100%{ opacity:.75; } 50%{ opacity:1.3; } }
+
+/* a few hearts and petals drifting up, slower and quieter than stars —
+   just enough warmth to feel romantic, never busy */
+.prelude-hearts{ position:absolute; inset:0; overflow:hidden; z-index:0; pointer-events:none; }
+.prelude-heart{
+  position:absolute; bottom:-8%; opacity:0; color: var(--rose);
+  animation-name: preludeHeartRise; animation-timing-function: ease-in; animation-iteration-count: infinite;
+}
+@keyframes preludeHeartRise{
+  0%{ opacity:0; transform: translate(0,0) rotate(0deg) scale(.8); }
+  12%{ opacity:.55; }
+  85%{ opacity:.4; }
+  100%{ opacity:0; transform: translate(var(--ph-x,20px), -115vh) rotate(var(--ph-r,25deg)) scale(1.1); }
 }
 
 .prelude-inner{ position:relative; z-index:1; max-width:600px; padding:24px; }
 .prelude-line{
   font-family: var(--script); font-style:italic; color: var(--ink-soft);
   font-size: clamp(1.15rem,3.4vw,1.6rem); line-height:1.6; margin:0 0 14px;
-  opacity:0; filter:blur(10px); transform:translateY(18px);
+  opacity:0; filter:blur(10px); transform:translateY(18px) scale(.97); letter-spacing:.02em;
 }
-.prelude-line.show{ animation: preludeLineIn 1.8s cubic-bezier(.2,.7,.2,1) forwards; }
-@keyframes preludeLineIn{ to{ opacity:1; filter:blur(0); transform:none; } }
+.prelude-line.show{ animation: preludeLineIn 2s cubic-bezier(.2,.7,.2,1) forwards; }
+@keyframes preludeLineIn{ to{ opacity:1; filter:blur(0); transform:none; letter-spacing:normal; } }
 .prelude-line.accent{
   font-family: var(--display); font-style:normal; color: var(--gold-soft);
-  font-size: clamp(1.7rem,5vw,2.5rem); letter-spacing:.05em; margin:26px 0 0;
+  font-size: clamp(1.7rem,5vw,2.5rem); letter-spacing:.05em; margin:8px 0 0;
 }
+
+.prelude-flourish{
+  display:flex; align-items:center; justify-content:center; gap:14px;
+  margin:20px auto 8px; max-width:220px; opacity:0;
+}
+.prelude-flourish.show{ animation: fadeUp 1.3s ease forwards; }
+.pf-line{ flex:1; height:1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.pf-heart{ color: var(--rose); font-size:.82rem; opacity:.9; animation: beat 2.6s ease-in-out infinite; }
 
 .prelude-btn{
   appearance:none; -webkit-appearance:none;
@@ -189,14 +213,14 @@ h1,h2{ font-family: var(--display); font-weight:500; margin:0; }
   font-family: var(--sans); font-weight:300; font-size:.78rem; letter-spacing:.32em; text-transform:uppercase;
   padding-left:calc(42px + .32em);
   opacity:0; transform:translateY(10px);
-  transition: background .35s ease, color .35s ease, transform .3s ease;
+  transition: background .35s ease, color .35s ease, transform .3s ease, box-shadow .35s ease;
 }
 .prelude-btn.show{ animation: fadeUp 1.2s ease forwards, preludeBtnPulse 2.6s ease-in-out infinite 1.4s; }
 @keyframes preludeBtnPulse{
   0%,100%{ box-shadow:0 0 0 0 rgba(240,206,134,.32); }
   50%{ box-shadow:0 0 0 15px rgba(240,206,134,0); }
 }
-.prelude-btn:hover{ background: var(--gold); color:#1A0E14; transform: translateY(-8px) scale(1.03); }
+.prelude-btn:hover{ background: var(--gold); color:#1A0E14; transform: translateY(-8px) scale(1.03); box-shadow: 0 14px 40px rgba(240,206,134,.35); }
 .prelude-btn-arrow{ transition: transform .3s ease; }
 .prelude-btn:hover .prelude-btn-arrow{ transform: translateX(5px); }
 
@@ -607,6 +631,36 @@ h1,h2{ font-family: var(--display); font-weight:500; margin:0; }
   display:flex; align-items:center; justify-content:center; font-size:1.05rem; backdrop-filter: blur(4px);
 }
 
+/* she's asked, not auto-started — a pulsing play button invites the tap */
+.js-play-btn{
+  position:absolute; left:50%; top:50%; z-index:3;
+  width: clamp(56px,13vw,68px); height: clamp(56px,13vw,68px);
+  transform:translate(-50%,-50%); border-radius:50%; border:none; cursor:pointer;
+  padding:0; appearance:none; display:flex; align-items:center; justify-content:center;
+  background: radial-gradient(circle at 34% 30%, var(--gold-soft), var(--gold-bright) 72%);
+  box-shadow: 0 12px 30px rgba(0,0,0,.5);
+  opacity:0; animation: fadeUp .8s ease .3s forwards, jsPlayPulse 2.6s ease-in-out 1.3s infinite;
+  transition: opacity .4s ease, transform .3s ease;
+}
+.js-play-btn:hover{ transform:translate(-50%,-50%) scale(1.07); }
+.js-play-btn.hide{ opacity:0!important; pointer-events:none; animation:none; }
+@keyframes jsPlayPulse{ 0%,100%{ transform:translate(-50%,-50%) scale(1);} 50%{ transform:translate(-50%,-50%) scale(1.08);} }
+.js-play-icon{ width:38%; height:38%; fill: var(--plum-deep); margin-left:8%; position:relative; z-index:2; }
+.js-play-ring{
+  position:absolute; inset:-10px; border-radius:50%; border:1.5px solid var(--gold-soft);
+  opacity:0; animation: jsRingPulse 2.6s ease-out infinite;
+}
+.js-play-ring.r2{ animation-delay:.9s; }
+@keyframes jsRingPulse{ 0%{ transform:scale(.8); opacity:.85; } 100%{ transform:scale(1.7); opacity:0; } }
+.js-play-hint{
+  position:absolute; left:50%; bottom:16px; transform:translateX(-50%); z-index:3;
+  font-family: var(--sans); font-weight:300; font-size:.66rem; letter-spacing:.26em; text-transform:uppercase;
+  color: var(--gold-soft); text-shadow: 0 2px 8px rgba(0,0,0,.65);
+  opacity:0; animation: fadeUp .8s ease .6s forwards;
+  transition: opacity .4s ease;
+}
+.js-play-hint.hide{ opacity:0!important; }
+
 /* ---- scene: what it meant ---- */
 .js-cap-scene{ padding:10px 6px 4px; }
 .js-cap-year{
@@ -674,6 +728,52 @@ h1,h2{ font-family: var(--display); font-weight:500; margin:0; }
 }
 @keyframes cakeStageIn{ to{ opacity:1; transform:none; filter:blur(0); } }
 
+/* the three tiers fall into place one by one, base first, then land with
+   a soft elastic squash — a little construction moment before anything
+   is lit */
+.tier{
+  opacity:0; transform-box: fill-box; transform-origin:50% 100%;
+  transform: translateY(-260px) scaleY(1) scaleX(1);
+}
+.cake-stage.tier1-in .tier-bottom,
+.cake-stage.tier2-in .tier-mid,
+.cake-stage.tier3-in .tier-top{ animation: tierFall .85s cubic-bezier(.3,.6,.3,1) forwards; }
+@keyframes tierFall{
+  0%{ opacity:0; transform: translateY(-260px) scaleY(1) scaleX(1); }
+  55%{ opacity:1; transform: translateY(0) scaleY(1) scaleX(1); }
+  70%{ transform: translateY(0) scaleY(.86) scaleX(1.07); }
+  85%{ transform: translateY(0) scaleY(1.06) scaleX(.97); }
+  100%{ opacity:1; transform: translateY(0) scaleY(1) scaleX(1); }
+}
+
+/* a little icing drizzled over the top tier, drips settling into place */
+.icing{ opacity:0; }
+.cake-stage.icing-on .icing{ opacity:1; }
+.icing-top{
+  opacity:0; transform-box: fill-box; transform-origin:50% 0%;
+  transform: scaleX(.25) scaleY(.4); transform-origin:50% 0%;
+}
+.cake-stage.icing-on .icing-top{ animation: icingReveal .7s ease-out forwards; }
+@keyframes icingReveal{
+  0%{ opacity:0; transform: scaleX(.25) scaleY(.3); }
+  55%{ opacity:1; }
+  100%{ opacity:1; transform: scaleX(1) scaleY(1); }
+}
+.icing-drip{
+  fill: url(#icingG); opacity:0; transform-box: fill-box; transform-origin:50% 0%;
+  transform: scaleY(.15) translateY(-6px);
+}
+.cake-stage.icing-on .icing-drip{ animation: icingDrip 1s cubic-bezier(.25,.75,.3,1) forwards; }
+.cake-stage.icing-on .icing-drip.d1{ animation-delay:.22s; }
+.cake-stage.icing-on .icing-drip.d2{ animation-delay:.36s; }
+.cake-stage.icing-on .icing-drip.d3{ animation-delay:.5s; }
+.cake-stage.icing-on .icing-drip.d4{ animation-delay:.64s; }
+@keyframes icingDrip{
+  0%{ opacity:0; transform: scaleY(.15) translateY(-6px); }
+  45%{ opacity:1; }
+  100%{ opacity:1; transform: scaleY(1) translateY(0); }
+}
+
 /* dramatic spotlight behind the cake, breathing gently once lit */
 .cake-spotlight{
   position:absolute; left:50%; top:14%; width:min(78vw,380px); height:min(78vw,380px);
@@ -706,49 +806,51 @@ h1,h2{ font-family: var(--display); font-weight:500; margin:0; }
 .cake-btn:not(:disabled){ cursor:pointer; }
 .cake-btn:not(:disabled):hover{ transform: scale(1.05); }
 .cake-stage.holding .cake-btn{ transform: scale(1.08); animation-play-state:paused; }
-/* the whole cake starts almost entirely dark — not just the candles —
-   and gradually brightens, step by step, as the lighter does its work */
 .cake-svg{
   width: clamp(230px,62vw,320px); height:auto; display:block; position:relative; z-index:2;
-  filter: brightness(.16) saturate(.45);
-  transition: filter 2.4s ease;
 }
-.cake-stage.candles-in .cake-svg{ filter: brightness(.34) saturate(.65); }
-.cake-stage.lighting .cake-svg{ filter: brightness(.5) saturate(.8); }
-.cake-stage.candle1-flame .cake-svg{ filter: brightness(.7) saturate(.9); }
-.cake-stage.candle2-flame .cake-svg{ filter: brightness(.9) saturate(.97); }
-.cake-stage.lit .cake-svg{ filter: brightness(1) saturate(1); }
 
-/* a little spark of light — sparkling as it goes — travels slowly to
-   each candle in turn and catches it, rather than the cake just
-   appearing lit all at once */
-.cake-lighter{
-  position:absolute; left:50%; top:14%; width:11px; height:11px; margin:-5px 0 0 -5px;
-  border-radius:50%; background: radial-gradient(circle, #fff, #ffcf6b 45%, transparent 75%);
-  box-shadow: 0 0 16px 6px rgba(255,196,107,.85);
-  opacity:0; pointer-events:none; z-index:5;
+/* a hand holding a small lit lighter travels in and touches each candle
+   in turn, rather than the cake just appearing lit all at once */
+.cake-hand{
+  position:absolute; left:50%; top:22%; width:56px; height:72px; margin:-40px 0 0 -14px;
+  opacity:0; pointer-events:none; z-index:6;
+  transform: translate(190px,150px) rotate(24deg) scale(.65);
 }
-.cake-stage.lighting .cake-lighter{ animation: lighterMove 2.8s cubic-bezier(.35,.55,.3,1) forwards; }
-@keyframes lighterMove{
-  0%{ opacity:0; transform: translate(-64px,-34px) scale(.5); }
-  8%{ opacity:1; }
-  40%{ opacity:1; transform: translate(-20px,0) scale(1); }
-  48%{ opacity:.35; transform: translate(-20px,5px) scale(.6); }
-  60%{ opacity:1; transform: translate(20px,0) scale(1); }
-  92%{ opacity:1; transform: translate(20px,0) scale(1); }
-  100%{ opacity:0; transform: translate(32px,-36px) scale(.4); }
+.cake-stage.hand-in .cake-hand{ animation: handTravel 2.9s cubic-bezier(.4,.6,.3,1) forwards; }
+@keyframes handTravel{
+  0%{ opacity:0; transform: translate(190px,150px) rotate(24deg) scale(.65); }
+  9%{ opacity:1; }
+  34%,46%{ opacity:1; transform: translate(-18px,4px) rotate(-4deg) scale(.88); }
+  62%,76%{ opacity:1; transform: translate(20px,4px) rotate(-6deg) scale(.88); }
+  100%{ opacity:0; transform: translate(160px,-90px) rotate(30deg) scale(.6); }
 }
-.lighter-spark{
-  position:absolute; width:2px; height:2px; border-radius:50%; background:#fff;
-  box-shadow: 0 0 5px 1.5px rgba(255,225,150,.95); opacity:0;
-  animation: sparkFizz .55s ease-in-out infinite;
+.hand-palm{
+  position:absolute; left:0; top:16px; width:30px; height:42px; border-radius:15px 15px 19px 11px;
+  background: linear-gradient(155deg,#f2c9a4,#dba679);
+  box-shadow: inset -3px -2px 7px rgba(120,70,40,.35);
 }
-.lighter-spark.s1{ top:-6px; left:2px; --sx:4px; --sy:-6px; animation-delay:0s; }
-.lighter-spark.s2{ top:4px; left:-7px; --sx:-5px; --sy:5px; animation-delay:.18s; }
-.lighter-spark.s3{ top:-3px; left:8px; --sx:6px; --sy:3px; animation-delay:.36s; }
-@keyframes sparkFizz{
-  0%,100%{ opacity:0; transform:scale(.4) translate(0,0); }
-  50%{ opacity:1; transform:scale(1.2) translate(var(--sx,3px), var(--sy,-4px)); }
+.hand-thumb{
+  position:absolute; left:-7px; top:29px; width:21px; height:12px; border-radius:8px;
+  background: linear-gradient(155deg,#f0c39a,#d59d6f);
+}
+.hand-lighter{
+  position:absolute; left:7px; top:-10px; width:9px; height:27px; border-radius:3px;
+  background: linear-gradient(180deg,#3f3f47,#1c1c22);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset;
+}
+.hand-lighter-flame{
+  position:absolute; left:50%; top:-9px; width:7px; height:11px; margin-left:-3.5px;
+  border-radius:50% 50% 50% 50%/62% 62% 38% 38%;
+  background: radial-gradient(circle at 50% 32%, #fff, #ffc46b 55%, transparent 82%);
+  opacity:0;
+}
+.cake-stage.hand-in .hand-lighter-flame{
+  opacity:1; animation: handFlameFlicker .13s ease-in-out infinite alternate;
+}
+@keyframes handFlameFlicker{
+  0%{ transform: scaleY(1) rotate(-3deg); }
+  100%{ transform: scaleY(1.14) rotate(3deg); }
 }
 
 /* the bright flash of light where the lighter meets each candle */
@@ -848,8 +950,9 @@ h1,h2{ font-family: var(--display); font-weight:500; margin:0; }
 .cake-stage.lit .cake-glow{ opacity:1; animation: glowPulse 2.6s ease-in-out infinite; }
 @keyframes glowPulse{ 0%,100%{ opacity:.75; transform:translate(-50%,-50%) scale(1);} 50%{ opacity:1; transform:translate(-50%,-50%) scale(1.14);} }
 
-/* candles start dark — the digits appear first, then each flame catches
-   in turn as the traveling spark (.cake-lighter) reaches it */
+/* candles arrive after the cake is built and iced — the digits appear
+   first, then each flame catches as the hand-with-lighter (.cake-hand)
+   reaches it */
 .candles{ opacity:0; transform: translateY(16px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,1.3,.35,1); }
 .cake-stage.candles-in .candles{ opacity:1; transform:none; }
 .flame{ transform-origin:center bottom; opacity:0; }
@@ -891,7 +994,7 @@ h1,h2{ font-family: var(--display); font-weight:500; margin:0; }
 }
 .cake-stage.blown .breath-ring,
 .cake-stage.blown .wind-streaks,
-.cake-stage.blown .cake-lighter{ opacity:0; }
+.cake-stage.blown .cake-hand{ opacity:0; }
 
 /* the cake doesn't vanish — it stays, and quietly blooms with warm light
    while the wish is sent off (see .wish-star below) */
@@ -1303,6 +1406,75 @@ h1,h2{ font-family: var(--display); font-weight:500; margin:0; }
   position:relative; z-index:1; margin-top:36px; opacity:0;
   animation: fadeUp 1s ease 3.4s forwards;
 }
+
+/* ================= 9.5 · A LITTLE LOOK BACK (auto-flashing montage) ================= */
+.memories-slide{
+  z-index:130; display:flex; flex-direction:column; align-items:center; justify-content:center; justify-content:safe center;
+  text-align:center; padding:28px; background:#000; overflow-x:hidden; overflow-y:auto;
+}
+.memories-slide.fading{ animation: intOut .8s ease forwards; }
+.memories-stars{ position:absolute; inset:0; overflow:hidden; z-index:0; pointer-events:none; }
+.memories-eyebrow{
+  position:relative; z-index:1;
+  font-family: var(--sans); font-weight:300; font-size:.7rem; letter-spacing:.42em; text-transform:uppercase;
+  color: var(--gold); padding-left:.42em; margin:0 0 26px; opacity:0;
+  animation: fadeUp 1s ease .2s forwards;
+}
+.memories-frame{
+  position:relative; z-index:1; width:min(74vw,320px); aspect-ratio:4/5; border-radius:20px; overflow:hidden;
+  background:#000; box-shadow: 0 30px 80px rgba(0,0,0,.6); border:1px solid rgba(240,206,134,.24);
+  opacity:0; transform: scale(.94); filter: blur(8px);
+  animation: memoriesFrameIn 1s cubic-bezier(.2,.8,.25,1.1) .3s forwards;
+}
+@keyframes memoriesFrameIn{ to{ opacity:1; transform:scale(1); filter:blur(0); } }
+.memories-img{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  opacity:0; transform:scale(1.06); transition: opacity 1.3s ease, transform 5s ease-out;
+}
+.memories-img.show{ opacity:1; transform:scale(1); }
+.memories-frame-glow{
+  position:absolute; inset:0; z-index:2; pointer-events:none; border-radius:20px;
+  box-shadow: inset 0 0 40px rgba(0,0,0,.35);
+}
+.memories-dots{ position:relative; z-index:1; margin-top:30px; }
+
+/* two small side arrows let her step back and forth through the photos
+   herself, rather than only ever waiting on the auto-flash — and stay
+   available even once she's reached the last one, so she can look back */
+.memories-next-btn, .memories-prev-btn{
+  appearance:none; -webkit-appearance:none; position:absolute; z-index:3;
+  top:50%; transform:translateY(-50%);
+  width:42px; height:42px; border-radius:50%; border:1px solid rgba(240,206,134,.4);
+  background: rgba(10,6,10,.4); backdrop-filter: blur(2px); color: var(--gold-soft);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  opacity:0; animation: fadeUp .9s ease .9s forwards;
+  transition: background .3s ease, transform .25s ease, border-color .3s ease, opacity .3s ease;
+}
+.memories-next-btn svg, .memories-prev-btn svg{ width:19px; height:19px; }
+.memories-next-btn{ right:14px; }
+.memories-prev-btn{ left:14px; }
+.memories-next-btn:hover, .memories-prev-btn:hover{ background: rgba(240,206,134,.16); border-color: var(--gold); transform:translateY(-50%) scale(1.08); }
+.memories-prev-btn.disabled{ opacity:0!important; pointer-events:none; animation:none; }
+
+/* the montage waits here — she has to choose to move on, instead of the
+   story sweeping her into the ending on its own */
+.memories-continue-btn{
+  appearance:none; -webkit-appearance:none; position:relative; z-index:1;
+  margin-top:36px; display:inline-flex; align-items:center; gap:14px;
+  padding:16px 42px; border-radius:100px; border:1px solid var(--gold);
+  background:transparent; color: var(--gold-soft); cursor:pointer;
+  font-family: var(--sans); font-weight:300; font-size:.78rem; letter-spacing:.32em; text-transform:uppercase;
+  padding-left:calc(42px + .32em);
+  opacity:0; transform:translateY(10px); pointer-events:none;
+  transition: background .35s ease, color .35s ease, transform .3s ease, box-shadow .35s ease, opacity .5s ease;
+}
+.memories-continue-btn.show{
+  opacity:1; transform:translateY(0); pointer-events:auto;
+  animation: preludeBtnPulse 2.6s ease-in-out infinite 1s;
+}
+.memories-continue-btn:hover{ background: var(--gold); color:#1A0E14; transform: translateY(-8px) scale(1.03); box-shadow: 0 14px 40px rgba(240,206,134,.35); }
+.memories-continue-arrow{ transition: transform .3s ease; }
+.memories-continue-btn:hover .memories-continue-arrow{ transform: translateX(5px); }
 
 /* ================= 10 · EPILOGUE (a quiet fade to black) ================= */
 .epilogue{

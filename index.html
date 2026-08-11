@@ -38,11 +38,15 @@
 <!-- ============ 0 · PRELUDE (a dark, cinematic opening) ============ -->
 <section id="prelude" class="prelude slide">
   <div class="prelude-stars" id="preludeStars" aria-hidden="true"></div>
+  <div class="prelude-hearts" id="preludeHearts" aria-hidden="true"></div>
   <div class="prelude-vignette" aria-hidden="true"></div>
   <div class="prelude-inner">
     <p class="prelude-line l1">Once, on an ordinary day,</p>
     <p class="prelude-line l2">a girl walked into my life</p>
     <p class="prelude-line l3">and quietly rearranged all of it.</p>
+    <div class="prelude-flourish" id="preludeFlourish" aria-hidden="true">
+      <span class="pf-line"></span><span class="pf-heart">♥</span><span class="pf-line"></span>
+    </div>
     <p class="prelude-line l4 accent">Today, she turns twenty&#8209;three.</p>
     <button class="prelude-btn" id="preludeBegin" hidden aria-label="Begin">
       <span>Begin</span><span class="prelude-btn-arrow">→</span>
@@ -212,10 +216,12 @@
     <div class="wind-streaks" aria-hidden="true"><span></span><span></span><span></span></div>
 
     <button class="cake-btn" id="cakeBtn" aria-label="Press and hold to blow out the candles" disabled>
-      <span class="cake-lighter" id="cakeLighter" aria-hidden="true">
-        <span class="lighter-spark s1"></span>
-        <span class="lighter-spark s2"></span>
-        <span class="lighter-spark s3"></span>
+      <span class="cake-hand" id="cakeHand" aria-hidden="true">
+        <span class="hand-thumb"></span>
+        <span class="hand-palm"></span>
+        <span class="hand-lighter">
+          <span class="hand-lighter-flame"></span>
+        </span>
       </span>
       <span class="cake-blowflash c1" aria-hidden="true"></span>
       <span class="cake-blowflash c2" aria-hidden="true"></span>
@@ -232,6 +238,9 @@
           </linearGradient>
           <linearGradient id="candleG" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#FFF3D6"/><stop offset="100%" stop-color="#E3C077"/>
+          </linearGradient>
+          <linearGradient id="icingG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#FFFDF6"/><stop offset="100%" stop-color="#FFE9C2"/>
           </linearGradient>
         </defs>
 
@@ -250,16 +259,29 @@
           </g>
         </g>
 
-        <rect x="80" y="78" width="80" height="42" rx="4" fill="url(#tierWine)"/>
-        <rect x="80" y="78" width="80" height="2.4" rx="1.2" fill="url(#trimGold)"/>
+        <g class="tier tier-top" id="tierTop">
+          <rect x="80" y="78" width="80" height="42" rx="4" fill="url(#tierWine)"/>
+          <rect x="80" y="78" width="80" height="2.4" rx="1.2" fill="url(#trimGold)"/>
+        </g>
 
-        <rect x="62" y="120" width="116" height="42" rx="4" fill="url(#tierGold)"/>
-        <rect x="62" y="120" width="116" height="2.4" rx="1.2" fill="url(#trimGold)"/>
+        <g class="tier tier-mid" id="tierMid">
+          <rect x="62" y="120" width="116" height="42" rx="4" fill="url(#tierGold)"/>
+          <rect x="62" y="120" width="116" height="2.4" rx="1.2" fill="url(#trimGold)"/>
+        </g>
 
-        <rect x="44" y="162" width="152" height="46" rx="5" fill="url(#tierWine)"/>
-        <rect x="44" y="162" width="152" height="2.4" rx="1.2" fill="url(#trimGold)"/>
+        <g class="tier tier-bottom" id="tierBottom">
+          <rect x="44" y="162" width="152" height="46" rx="5" fill="url(#tierWine)"/>
+          <rect x="44" y="162" width="152" height="2.4" rx="1.2" fill="url(#trimGold)"/>
+          <ellipse cx="120" cy="210" rx="98" ry="6" fill="none" stroke="url(#trimGold)" stroke-width="2.2"/>
+        </g>
 
-        <ellipse cx="120" cy="210" rx="98" ry="6" fill="none" stroke="url(#trimGold)" stroke-width="2.2"/>
+        <g class="icing" id="icing">
+          <path class="icing-top" d="M80,80 Q90,71 100,80 Q110,89 120,80 Q130,71 140,80 Q150,89 160,80" fill="url(#icingG)"/>
+          <ellipse class="icing-drip d1" cx="91" cy="90" rx="3.6" ry="4.6"/>
+          <ellipse class="icing-drip d2" cx="109" cy="93" rx="3.1" ry="4.2"/>
+          <ellipse class="icing-drip d3" cx="129" cy="91" rx="3.8" ry="5"/>
+          <ellipse class="icing-drip d4" cx="148" cy="93" rx="3.2" ry="4.3"/>
+        </g>
       </svg>
       <span class="cake-glow" id="cakeGlow" aria-hidden="true"></span>
     </button>
@@ -329,6 +351,30 @@
   <footer class="footer">
     <p>made with love, just for <strong>Piu</strong> — <span id="todayDate"></span></p>
   </footer>
+</section>
+
+<!-- ============ 9.5 · A LITTLE LOOK BACK (auto-flashing photo montage) ============ -->
+<section id="memoriesSlide" class="memories-slide slide" hidden>
+  <div class="memories-stars" id="memoriesStars" aria-hidden="true"></div>
+  <p class="memories-eyebrow">twenty-three years, in a few frames</p>
+  <div class="memories-frame" id="memoriesFrame">
+    <img class="memories-img" id="memoriesImgA" src="" alt="a memory of Piu">
+    <img class="memories-img" id="memoriesImgB" src="" alt="a memory of Piu">
+    <span class="memories-frame-glow" aria-hidden="true"></span>
+    <button class="memories-prev-btn" id="memoriesPrevBtn" aria-label="Previous photo" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="memories-next-btn" id="memoriesNextBtn" aria-label="Next photo" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+  <div class="js-dots memories-dots" id="memoriesDots" aria-hidden="true">
+    <span class="js-dot"></span><span class="js-dot"></span><span class="js-dot"></span>
+    <span class="js-dot"></span><span class="js-dot"></span><span class="js-dot"></span>
+  </div>
+  <button class="memories-continue-btn" id="memoriesContinueBtn" type="button">
+    <span>Continue</span><span class="memories-continue-arrow">→</span>
+  </button>
 </section>
 
 <!-- ============ 10 · EPILOGUE (a closing line, then its own "The End", then just black) ============ -->
