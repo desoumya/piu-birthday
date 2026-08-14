@@ -448,9 +448,6 @@
   }
   $('celContinue').addEventListener('click', () => { if (celAdvance) celAdvance(); });
 
-  $('todayDate').textContent = new Date().toLocaleDateString('en-US',
-    { year:'numeric', month:'long', day:'numeric' });
-
   /* ================= 3 · Generic transition screen (reused between chapters) ================= */
   const transitionEl = $('transition');
   const tLines = Array.from(transitionEl.querySelectorAll('.int-line'));
