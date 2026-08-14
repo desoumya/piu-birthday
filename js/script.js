@@ -21,6 +21,22 @@
     setTimeout(run, 120);
   }
 
+  // tries a real photo under a few common extensions, in order, before
+  // giving up — so she can drop in a .jpg, .png, whatever she has, without
+  // ever having to touch the code
+  const PHOTO_EXTS = ['.jpg', '.jpeg', '.png', '.webp'];
+  function resolvePhoto(basePath, onFound, onNone){
+    let i = 0;
+    (function tryNext(){
+      if (i >= PHOTO_EXTS.length){ if (onNone) onNone(); return; }
+      const src = basePath + PHOTO_EXTS[i++];
+      const test = new Image();
+      test.onload = () => onFound(src);
+      test.onerror = tryNext;
+      test.src = src;
+    })();
+  }
+
   /* ================= Theme ================= */
   // one fixed theme by design — dark, cinematic, no toggle to fuss with
   root.setAttribute('data-theme', 'dark');
@@ -513,24 +529,24 @@
      that go with it. No skipping, no tapping to watch — she just receives
      it, chapter by chapter, all the way to today. ================= */
   const JOURNEY_CHAPTERS = [
-    { year:'2003', title:'The Beginning',
+    { year:'14th September, 2003', title:'The Beginning',
       cap:"The day the world quietly rearranged itself around one small, remarkable heartbeat — and got immeasurably better without asking anyone's permission.",
-      video:'assets/video/journey1.mp4', poster:'assets/images/journey1.jpg' },
+      video:'assets/video/journey1.mp4', poster:'assets/images/journey1' },
     { year:'2008', title:'Small, and Completely in Charge',
-      cap:"Tiny hands, enormous opinions, and a smile that already knew exactly what it was doing. Some things, it turns out, you're simply born knowing.",
-      video:'assets/video/journey2.mp4', poster:'assets/images/journey2.jpg' },
+      cap:"Tiny hands, enormous opinions, and a smile that already knew exactly what it was doing",
+      video:'assets/video/journey2.mp4', poster:'assets/images/journey2' },
     { year:'2014', title:'School Days',
-      cap:'Somewhere between these lessons and this laughter, you were quietly becoming the kindest person I would ever have the extraordinary luck of knowing.',
-      video:'assets/video/journey3.mp4', poster:'assets/images/journey3.jpg' },
-    { year:'2021', title:'The World Went Quiet',
-      cap:"Everything paused that year — the noise, the plans, the certainty. You didn't. You kept growing, gently, into exactly who you were always meant to become.",
-      video:'assets/video/journey4.mp4', poster:'assets/images/journey4.jpg' },
-    { year:'2023', title:'Golden College Days',
-      cap:'Late nights, louder laughter, a thousand small adventures — the years quietly writing the story of the woman I would one day fall hopelessly, entirely for.',
-      video:'assets/video/journey5.mp4', poster:'assets/images/journey5.jpg' },
+      cap:'Somewhere between these lessons and this laughter, you were quietly becoming the kindest person.',
+      video:'assets/video/journey3.mp4', poster:'assets/images/journey3' },
+    { year:'2020', title:'Corona Pandemic | The World Went Quiet',
+      cap:"Everything paused that year. But, You didn't.",
+      video:'assets/video/journey4.mp4', poster:'assets/images/journey4' },
+    { year:'2021', title:'Golden College Days',
+      cap:'Late nights, louder laughter, a thousand small adventures.',
+      video:'assets/video/journey5.mp4', poster:'assets/images/journey5' },
     { year:'25th January, 2026', title:'The Day You Walked In',
-      cap:"An ordinary Sunday, and then — quite without warning — my whole life quietly rearranged itself around you. Months later, I still haven't worked out how I got this lucky.",
-      video:'assets/video/journey6.mp4', poster:'assets/images/journey6.jpg' }
+      cap:"An ordinary Sunday, and then — quite without warning — my whole life quietly rearranged itself around you.",
+      video:'assets/video/journey6.mp4', poster:'assets/images/journey6' }
   ];
 
   function runJourneySlide(onNext){
@@ -604,7 +620,7 @@
             <span class="js-video-corner tl" aria-hidden="true"></span><span class="js-video-corner tr" aria-hidden="true"></span>
             <span class="js-video-corner bl" aria-hidden="true"></span><span class="js-video-corner br" aria-hidden="true"></span>
             <span class="js-video-year">${ch.year}</span>
-            <video class="js-video-el" id="jsVideoEl" playsinline${ch.poster ? ` poster="${ch.poster}"` : ''}>
+            <video class="js-video-el" id="jsVideoEl" playsinline>
               <source src="${ch.video}" type="video/mp4">
             </video>
             <button class="js-play-btn" id="jsPlayBtn" aria-label="Watch this memory">
@@ -621,6 +637,10 @@
           currentVideo = video;
           let advanced = false;
           const wasBgmPlaying = musicPlaying;
+
+          // whichever real photo she dropped in (.jpg, .png, whatever)
+          // becomes the still frame shown before she taps play
+          if (ch.poster) resolvePhoto(ch.poster, src => { video.poster = src; });
 
           function advance(){
             if (advanced) return;
@@ -961,41 +981,55 @@
 
   /* ================= Card content (shown in the modal once scratched) ================= */
   const IMG_FALLBACK = seed => `https://picsum.photos/seed/${seed}/500/650`;
+  // same rule as everywhere else: drop in a base-named file in whatever
+  // format you have, and it's picked up automatically — the extension
+  // chain is wired up in JS (see wireGalleryImg) rather than inline, so
+  // there's no HTML-attribute quoting to fight with
   function galleryImg(name, seed, caption){
+    const base = 'assets/images/' + name;
     return `<figure>
-      <img src="assets/images/${name}" alt="${caption}"
-           onerror="this.onerror=null;this.src='${IMG_FALLBACK(seed)}';">
+      <img src="${base}${PHOTO_EXTS[0]}" data-base="${base}" data-ei="0" data-fallback="${IMG_FALLBACK(seed)}" alt="${caption}">
       <figcaption>${caption}</figcaption>
     </figure>`;
+  }
+  function wireGalleryImg(img){
+    img.addEventListener('error', function onErr(){
+      const i = (+img.dataset.ei) + 1;
+      if (i < PHOTO_EXTS.length){
+        img.dataset.ei = i;
+        img.src = img.dataset.base + PHOTO_EXTS[i];
+      } else {
+        img.removeEventListener('error', onErr);
+        img.src = img.dataset.fallback;
+      }
+    });
   }
   const cardContent = {
     1: { icon:'💌', title:'How We Met', html:`
       <div class="modal-text">
-        <p>It's strange, isn't it? Six months ago you were still a stranger — and now I can't get through a day without telling you something small, just because I want you to know it.</p>
+        <p>It's strange, isn't it? Nine months ago you were still a stranger — and now I can't get through a day without telling you something small, just because I want you to know it.</p>
         <p>I still remember exactly how it felt when we first started talking. Something in my life quietly clicked into place, and it hasn't stopped feeling that way since.</p>
-        <p><em>(Replace this with the real story of how you two met — in your own words, it'll mean the world to her.)</em></p>
       </div>` },
     2: { icon:'💕', title:'What I Love About You', html:`
       <ul class="love-list">
-        <li>The way your laugh shows up before you even finish the joke.</li>
-        <li>How fiercely you care about the people you love — including me, especially me.</li>
+        <li>The way your laugh shows up before even finish the joke.</li>
+        <li>How fiercely you care about the people you love.</li>
         <li>Your honesty, even when it would be easier to say nothing.</li>
         <li>The way ordinary days feel like an occasion when you're around.</li>
-        <li>How strong you are, quietly, without ever needing anyone to notice.</li>
-        <li>Every single thing about the way you say my name.</li>
+        <li>The positive mindset that you bring with. </li>
       </ul>
-      <p class="modal-text" style="margin-top:16px;"><em>(Edit freely — six is just a start, Piu deserves the whole page.)</em></p>` },
+      ` },
     3: { icon:'📸', title:'Our Favourite Memories', html:`
       <div class="memory-gallery">
-        ${galleryImg('memory1.jpg','piu-memory-1','Our first date')}
-        ${galleryImg('memory2.jpg','piu-memory-2','That trip we still talk about')}
-        ${galleryImg('memory3.jpg','piu-memory-3','Just us, being silly')}
+        ${galleryImg('memory1','piu-memory-1','Our first date')}
+        ${galleryImg('memory2','piu-memory-2','That trip we still talk about')}
+        ${galleryImg('memory3','piu-memory-3','Just us, being silly')}
       </div>
-      <p class="modal-text"><em>Drop your real photos into <strong>assets/images/</strong> as memory1.jpg, memory2.jpg, memory3.jpg — they replace these automatically.</em></p>` },
+      ` },
     4: { icon:'🤍', title:'A Promise For Us', html:`
       <div class="modal-text">
         <p>I promise to keep choosing you — not just on the easy days, but on the ordinary Tuesdays too.</p>
-        <p>On <strong>25th November</strong>, we make it official in front of everyone who loves us. On <strong>28th January 2027</strong>, I get to call you my wife. But honestly, Piu — I've already decided you're mine to love, for every year after that.</p>
+        <p>On <strong>25th November</strong>, we will make it official in front of everyone who loves us. On <strong>28th January 2027</strong>, I get to call you my wife.</p>
         <p>This is only the first birthday of yours I get to celebrate. I plan on being there for every single one that follows.</p>
       </div>` },
     5: { icon:'⏳', title:'Our Journey Ahead', compact:true, html:`
@@ -1022,6 +1056,7 @@
       ${data.html}`;
     overlay.classList.add('open');
     modalBody.querySelectorAll('.cd-card').forEach(startCountdownCard);
+    modalBody.querySelectorAll('.memory-gallery img').forEach(wireGalleryImg);
   }
   function closeModal(){
     overlay.classList.remove('open');
@@ -1629,8 +1664,11 @@
     const nextBtn = $('memoriesNextBtn');
     const prevBtn = $('memoriesPrevBtn');
     const continueBtn = $('memoriesContinueBtn');
-    const sources = [1,2,3,4,5,6].map(n => 'assets/images/journey' + n + '.jpg');
-    const fallbacks = [1,2,3,4,5,6].map(n => 'https://picsum.photos/seed/piu-j' + n + '/700/860');
+    // its own dedicated set of photos — separate from the journey video
+    // posters and the scratch-card gallery, so this flashback can be a
+    // totally different selection of pictures
+    const sources = [1,2,3,4,5,6].map(n => 'assets/images/frames' + n);
+    const fallbacks = [1,2,3,4,5,6].map(n => 'https://picsum.photos/seed/piu-frame-' + n + '/700/860');
     slide.hidden = false;
     slide.classList.remove('at-end');
     continueBtn.classList.remove('show');
@@ -1642,11 +1680,8 @@
         d.classList.toggle('done', di < i);
       });
     }
-    function preload(src, fallback, cb){
-      const test = new Image();
-      test.onload = () => cb(src);
-      test.onerror = () => cb(fallback);
-      test.src = src;
+    function preload(base, fallback, cb){
+      resolvePhoto(base, cb, () => cb(fallback));
     }
     function clearAuto(){
       if (advanceTimer){ clearTimeout(advanceTimer); advanceTimer = null; }
