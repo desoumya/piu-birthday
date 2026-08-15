@@ -147,6 +147,72 @@ h1,h2{ font-family: var(--display); font-weight:500; margin:0; }
   100%{ transform: translateY(108vh) translateX(var(--drift-x,40px)) rotate(200deg); opacity:0; }
 }
 
+/* ================= PAUSE / PLAY — sits above absolutely everything, so
+   she can freeze the story on any page and take her time reading ================= */
+/* blocks accidental taps elsewhere while paused — no visual dimming or
+   blur, the screen should look exactly as it did the instant she paused it */
+.pause-scrim{
+  position:fixed; inset:0; z-index:550; pointer-events:none;
+  background:transparent;
+}
+body.app-paused .pause-scrim{ pointer-events:auto; }
+
+.pause-label{
+  position:fixed; top:23px; right:74px; z-index:560;
+  margin:0; font-family: var(--sans); font-weight:300; font-size:.64rem;
+  letter-spacing:.32em; text-transform:uppercase; color: var(--gold-soft);
+  text-shadow: 0 2px 10px rgba(0,0,0,.7);
+  opacity:0; transform:translateX(8px); pointer-events:none;
+  transition: opacity .45s ease, transform .45s ease;
+}
+body.app-paused .pause-label{ opacity:1; transform:none; }
+
+.pause-toggle{
+  appearance:none; -webkit-appearance:none;
+  position:fixed; top:16px; right:16px; z-index:600;
+  width:40px; height:40px; border-radius:50%;
+  border:1px solid rgba(240,206,134,.42);
+  background: rgba(10,6,10,.42); backdrop-filter: blur(6px);
+  color: var(--gold-soft); cursor:pointer; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: 0 6px 20px rgba(0,0,0,.35);
+  transition: background .3s ease, border-color .3s ease, transform .3s cubic-bezier(.3,.9,.3,1.3), box-shadow .3s ease;
+}
+.pause-toggle:hover{ background: rgba(240,206,134,.16); border-color: var(--gold); transform: scale(1.09); box-shadow: 0 8px 26px rgba(0,0,0,.4); }
+.pause-toggle:active{ transform: scale(.92); }
+
+/* a slow breathing ring that's only ever visible while paused — the one
+   thing still quietly alive on an otherwise frozen screen */
+.pt-ring{
+  position:absolute; inset:-7px; border-radius:50%; pointer-events:none;
+  border:1px solid rgba(240,206,134,.4); opacity:0;
+}
+body.app-paused .pt-ring{ animation: ptRingPulse 2.4s ease-out infinite; }
+body.app-paused .pt-ring.r2{ animation-delay:1.2s; }
+@keyframes ptRingPulse{ 0%{ transform:scale(.82); opacity:.75; } 100%{ transform:scale(1.45); opacity:0; } }
+
+/* icon cross-fades + rotates between pause/play rather than just swapping */
+.pt-icon{
+  position:absolute; width:16px; height:16px; fill:currentColor;
+  transition: opacity .35s ease, transform .4s cubic-bezier(.3,.8,.3,1.2);
+}
+.pt-icon-pause{ opacity:1; transform: scale(1) rotate(0deg); }
+.pt-icon-play{ opacity:0; transform: scale(.5) rotate(-90deg); }
+body.app-paused .pt-icon-pause{ opacity:0; transform: scale(.5) rotate(90deg); }
+body.app-paused .pt-icon-play{ opacity:1; transform: scale(1) rotate(0deg); }
+
+/* the freeze itself — every keyframe animation site-wide holds in place,
+   except the pause button's own ring, which keeps gently breathing */
+body.app-paused *:not(.pause-toggle):not(.pause-toggle *){
+  animation-play-state: paused !important;
+}
+
+@media (max-width:600px){
+  .pause-toggle{ top:12px; right:12px; width:36px; height:36px; }
+  .pt-icon{ width:14px; height:14px; }
+  .pause-label{ top:19px; right:56px; font-size:.58rem; }
+}
+
 /* ================= 0 · PRELUDE ================= */
 .prelude{
   z-index:220; display:flex; align-items:center; justify-content:center; justify-content:safe center;
@@ -1519,6 +1585,9 @@ h1,h2{ font-family: var(--display); font-weight:500; margin:0; }
 }
 .epilogue-endmark.show{ opacity:1; filter:blur(0); }
 .epilogue-endmark.fade-out{ opacity:0; filter:blur(10px); }
+/* the very last line gets a slower, more lingering fade than the others —
+   the last thing on screen shouldn't hurry away */
+.epilogue-endmark.fade-out-slow{ transition: opacity 4.5s ease, filter 4.5s ease; opacity:0; filter:blur(14px); }
 .epilogue-end-text{
   font-family: var(--signature); font-style:normal; color: var(--gold-soft);
   font-size: clamp(2.6rem,9vw,4.6rem); letter-spacing:.04em; margin:0;

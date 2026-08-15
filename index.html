@@ -22,6 +22,16 @@
 <div class="balloons" id="balloons" aria-hidden="true"></div>
 <div class="floaters" id="floaters" aria-hidden="true"></div>
 
+<!-- ============ Pause / play — freezes the whole story so she can linger on a page ============ -->
+<div class="pause-scrim" id="pauseScrim" aria-hidden="true"></div>
+<p class="pause-label" id="pauseLabel" aria-hidden="true">paused</p>
+<button class="pause-toggle" id="pauseToggle" aria-label="Pause" aria-pressed="false">
+  <span class="pt-ring" aria-hidden="true"></span>
+  <span class="pt-ring r2" aria-hidden="true"></span>
+  <svg class="pt-icon pt-icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4.4" height="14" rx="1.2"/><rect x="13.6" y="5" width="4.4" height="14" rx="1.2"/></svg>
+  <svg class="pt-icon pt-icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.4v13.2c0 .8.9 1.3 1.6.9l10.4-6.6c.6-.4.6-1.4 0-1.8L9.6 4.5c-.7-.4-1.6.1-1.6.9z"/></svg>
+</button>
+
 <audio id="bgm" loop preload="none">
   <source src="assets/audio/song.mp3" type="audio/mpeg">
   <source src="assets/audio/songs.mp3" type="audio/mpeg">
@@ -49,7 +59,7 @@
     </div>
     <p class="prelude-line l4 accent">Today, she turns twenty&#8209;three.</p>
     <button class="prelude-btn" id="preludeBegin" hidden aria-label="Begin">
-      <span>Begin</span><span class="prelude-btn-arrow">→</span>
+      <span>Start the Journey</span><span class="prelude-btn-arrow">→</span>
     </button>
   </div>
 </section>
@@ -60,7 +70,7 @@
     <span class="gf gf-tl" aria-hidden="true"></span><span class="gf gf-tr" aria-hidden="true"></span>
     <span class="gf gf-bl" aria-hidden="true"></span><span class="gf gf-br" aria-hidden="true"></span>
 
-    <p class="gate-date">VI &nbsp;·&nbsp; VIII &nbsp;·&nbsp; MMXXVI</p>
+    <p class="gate-date">XIV &nbsp;·&nbsp; IX &nbsp;·&nbsp; MMIII</p>
     <p class="gate-for">a letter for</p>
     <h1 class="gate-name">Piu</h1>
 
@@ -384,7 +394,7 @@
     <p class="epilogue-line l4 accent">Mu tumaku bhala pae ❤️</p>
   </div>
   <div class="epilogue-endmark" id="epilogueEndmark" hidden>
-    <p class="epilogue-end-text">The End.</p>
+    <p class="epilogue-end-text" id="epilogueEndText">Just the Beginning.</p>
   </div>
 </section>
 

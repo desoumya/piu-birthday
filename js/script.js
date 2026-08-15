@@ -9,6 +9,105 @@
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const $ = id => document.getElementById(id);
 
+  /* ================= Pause / play — a single global freeze =================
+     Every setTimeout/setInterval that drives the story is swapped for the
+     pausable versions below (pTimeout/pInterval — same call signature, drop-in
+     replacements). Pausing doesn't cancel anything, it just stops each
+     timer's clock and remembers exactly how much time was left, so resuming
+     picks up mid-wait rather than skipping or restarting. CSS animations are
+     frozen separately, in bulk, via a body class (see .pause-toggle CSS). */
+  const _setTimeout = window.setTimeout.bind(window);
+  const _clearTimeout = window.clearTimeout.bind(window);
+  const _setInterval = window.setInterval.bind(window);
+  const _clearInterval = window.clearInterval.bind(window);
+
+  let appPaused = false;
+  let pTimerSeq = 1;
+  const pTimers = new Map(); // id -> { fn, delay, remaining, startedAt, handle, interval }
+
+  function pTimeout(fn, delay){
+    const id = pTimerSeq++;
+    const rec = { fn, delay: delay || 0, remaining: delay || 0, startedAt: Date.now(), handle: null, interval: false };
+    if (!appPaused){
+      rec.handle = _setTimeout(() => { pTimers.delete(id); fn(); }, rec.delay);
+    }
+    pTimers.set(id, rec);
+    return id;
+  }
+  function pClearTimeout(id){
+    const rec = pTimers.get(id);
+    if (rec && rec.handle != null) _clearTimeout(rec.handle);
+    pTimers.delete(id);
+  }
+  function pInterval(fn, delay){
+    const id = pTimerSeq++;
+    const rec = { fn, delay: delay || 0, remaining: delay || 0, startedAt: Date.now(), handle: null, interval: true };
+    if (!appPaused) rec.handle = _setInterval(fn, rec.delay);
+    pTimers.set(id, rec);
+    return id;
+  }
+  function pClearInterval(id){
+    const rec = pTimers.get(id);
+    if (rec && rec.handle != null) _clearInterval(rec.handle);
+    pTimers.delete(id);
+  }
+
+  function pauseTimers(){
+    const now = Date.now();
+    pTimers.forEach(rec => {
+      if (rec.handle == null) return;
+      if (rec.interval){
+        _clearInterval(rec.handle);
+      } else {
+        _clearTimeout(rec.handle);
+        rec.remaining = Math.max(0, rec.delay - (now - rec.startedAt));
+      }
+      rec.handle = null;
+    });
+  }
+  function resumeTimers(){
+    const now = Date.now();
+    pTimers.forEach((rec, id) => {
+      if (rec.interval){
+        rec.handle = _setInterval(rec.fn, rec.delay);
+      } else {
+        rec.startedAt = now;
+        rec.handle = _setTimeout(() => { pTimers.delete(id); rec.fn(); }, rec.remaining);
+      }
+    });
+  }
+
+  function setAppPaused(next){
+    if (appPaused === next) return;
+    appPaused = next;
+    document.body.classList.toggle('app-paused', appPaused);
+    const btn = $('pauseToggle');
+    if (btn) btn.setAttribute('aria-pressed', String(appPaused));
+    if (appPaused){
+      pauseTimers();
+      document.querySelectorAll('video, audio').forEach(el => {
+        if (!el.paused){ el.dataset.pausedByApp = '1'; el.pause(); }
+      });
+    } else {
+      resumeTimers();
+      document.querySelectorAll('video[data-paused-by-app], audio[data-paused-by-app]').forEach(el => {
+        delete el.dataset.pausedByApp;
+        el.play().catch(() => {});
+      });
+    }
+  }
+  const pauseToggle = $('pauseToggle');
+  if (pauseToggle){
+    pauseToggle.addEventListener('click', () => setAppPaused(!appPaused));
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key !== ' ' && e.key !== 'Spacebar') return;
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'TEXTAREA') return;
+    e.preventDefault();
+    setAppPaused(!appPaused);
+  });
+
   // runs fn on the next paint frame, same as requestAnimationFrame — but
   // with a short setTimeout safety net, so a throttled/backgrounded tab
   // (some mobile browsers pause rAF) can never leave her stuck looking at
@@ -18,7 +117,7 @@
     let done = false;
     const run = () => { if (done) return; done = true; fn(); };
     requestAnimationFrame(() => requestAnimationFrame(run));
-    setTimeout(run, 120);
+    pTimeout(run, 120);
   }
 
   // tries a real photo under a few common extensions, in order, before
@@ -149,11 +248,11 @@
     const dur = fast ? (5+Math.random()*4) : (13+Math.random()*10);
     b.style.animationDuration = dur+'s';
     balloonsEl.appendChild(b);
-    setTimeout(() => b.remove(), dur*1000+200);
+    pTimeout(() => b.remove(), dur*1000+200);
   }
   function startBalloons(ms){
-    if (balloonTimer) clearInterval(balloonTimer);
-    balloonTimer = setInterval(() => spawnBalloon(false), ms);
+    if (balloonTimer) pClearInterval(balloonTimer);
+    balloonTimer = pInterval(() => spawnBalloon(false), ms);
   }
 
   /* ================= Floating dust ================= */
@@ -172,11 +271,11 @@
     const dur = 14+Math.random()*12;
     s.style.animationDuration = dur+'s';
     floatersEl.appendChild(s);
-    setTimeout(() => s.remove(), dur*1000);
+    pTimeout(() => s.remove(), dur*1000);
   }
   if (!reduced){
-    setInterval(spawnFloater, 700);
-    for (let i=0;i<10;i++) setTimeout(spawnFloater, i*260);
+    pInterval(spawnFloater, 700);
+    for (let i=0;i<10;i++) pTimeout(spawnFloater, i*260);
   }
 
   /* ================= Letter splitting (celebration title) ================= */
@@ -322,19 +421,19 @@
       btn.classList.add('show');
       return;
     }
-    setTimeout(() => { badge.classList.add('opening'); }, 2200); // let her read the 22 first
-    setTimeout(() => {
+    pTimeout(() => { badge.classList.add('opening'); }, 2200); // let her read the 22 first
+    pTimeout(() => {
       badge.classList.add('landed');
       const r = badge.getBoundingClientRect();
       burst(r.left + r.width/2, r.top + r.height/2, 70);
-      for (let i=0;i<14;i++) setTimeout(() => spawnBalloon(true), i*90);
+      for (let i=0;i<14;i++) pTimeout(() => spawnBalloon(true), i*90);
     }, 3400); // right as the doors finish swinging open
-    setTimeout(() => caption.classList.add('show'), 4100);
-    setTimeout(() => {
+    pTimeout(() => caption.classList.add('show'), 4100);
+    pTimeout(() => {
       bouquet.hidden = false;
       revealNextFrame(() => bouquet.classList.add('show'));
     }, 4700);
-    setTimeout(() => btn.classList.add('show'), 5400);
+    pTimeout(() => btn.classList.add('show'), 5400);
   }
 
   /* ================= 0 · Prelude — a dark, cinematic opening ================= */
@@ -386,12 +485,12 @@
     }
     let delay = 700;
     lines.forEach((l, i) => {
-      setTimeout(() => l.classList.add('show'), delay);
+      pTimeout(() => l.classList.add('show'), delay);
       // the little heart flourish blooms in just before the final line
-      if (i === lines.length - 2) setTimeout(() => flourish.classList.add('show'), delay + 900);
+      if (i === lines.length - 2) pTimeout(() => flourish.classList.add('show'), delay + 900);
       delay += (i === lines.length - 1) ? 1500 : 2000;
     });
-    setTimeout(() => {
+    pTimeout(() => {
       btn.hidden = false;
       revealNextFrame(() => btn.classList.add('show'));
     }, delay + 300);
@@ -401,7 +500,7 @@
   $('preludeBegin').addEventListener('click', () => {
     tryPlayMusic(); // the true first user gesture — best shot at audio autoplay
     prelude.classList.add('fading');
-    setTimeout(() => {
+    pTimeout(() => {
       prelude.hidden = true;
       gate.hidden = false;
     }, 900);
@@ -415,13 +514,13 @@
   $('openGate').addEventListener('click', () => {
     gate.classList.add('closing');
     tryPlayMusic();
-    setTimeout(() => {
+    pTimeout(() => {
       gate.hidden = true;
       celebrate.hidden = false;
       cannons();
-      setTimeout(() => burst(innerWidth/2, innerHeight*0.35, 90), 260);
-      setTimeout(cannons, 900);
-      for (let i=0;i<26;i++) setTimeout(() => spawnBalloon(true), i*90);
+      pTimeout(() => burst(innerWidth/2, innerHeight*0.35, 90), 260);
+      pTimeout(cannons, 900);
+      for (let i=0;i<26;i++) pTimeout(() => spawnBalloon(true), i*90);
       startBalloons(1400);
       runAgeSequence();
       armCelebrationAdvance();
@@ -437,14 +536,14 @@
       celAdvance = null;
       celebrate.classList.add('fading');
       burst(innerWidth/2, innerHeight*0.5, 50);
-      setTimeout(() => {
+      pTimeout(() => {
         celebrate.hidden = true;
         celebrate.classList.remove('fading');
         startBalloons(5200);
         goGrowingUp();
       }, 620);
     };
-    setTimeout(() => { if (celAdvance) celAdvance(); }, 10500);
+    pTimeout(() => { if (celAdvance) celAdvance(); }, 10500);
   }
   $('celContinue').addEventListener('click', () => { if (celAdvance) celAdvance(); });
 
@@ -456,7 +555,7 @@
   const tSkip = $('transSkip');
   let transTimers = [], transAdvance = null;
 
-  function clearTransTimers(){ transTimers.forEach(clearTimeout); transTimers = []; }
+  function clearTransTimers(){ transTimers.forEach(pClearTimeout); transTimers = []; }
 
   function showTransition(lines, hintText, onNext){
     clearTransTimers();
@@ -477,7 +576,7 @@
       transAdvance = null;
       clearTransTimers();
       transitionEl.classList.add('fading');
-      transTimers.push(setTimeout(() => {
+      transTimers.push(pTimeout(() => {
         transitionEl.hidden = true;
         transitionEl.classList.remove('fading');
         onNext();
@@ -487,7 +586,7 @@
     if (reduced){
       tLines.forEach(l => { if (l.style.display !== 'none') l.classList.add('show'); });
       tRule.classList.add('show'); tHint.classList.add('show');
-      transTimers.push(setTimeout(() => transAdvance(), 2200));
+      transTimers.push(pTimeout(() => transAdvance(), 2200));
       return;
     }
 
@@ -496,14 +595,14 @@
     let delay = 450;
     const visible = tLines.filter(l => l.style.display !== 'none');
     visible.forEach((l, i) => {
-      transTimers.push(setTimeout(() => l.classList.add('show'), delay));
+      transTimers.push(pTimeout(() => l.classList.add('show'), delay));
       delay += (i === 0 ? 1300 : 1150);
     });
-    transTimers.push(setTimeout(() => tRule.classList.add('show'), delay));
+    transTimers.push(pTimeout(() => tRule.classList.add('show'), delay));
     delay += 450;
-    transTimers.push(setTimeout(() => tHint.classList.add('show'), delay));
+    transTimers.push(pTimeout(() => tHint.classList.add('show'), delay));
     delay += 1300;
-    transTimers.push(setTimeout(() => transAdvance(), delay));
+    transTimers.push(pTimeout(() => transAdvance(), delay));
   }
   tSkip.addEventListener('click', () => { if (transAdvance) transAdvance(); });
   transitionEl.addEventListener('click', e => {
@@ -552,7 +651,7 @@
     const dots = Array.from(slide.querySelectorAll('.js-dot'));
     let idx = -1, timers = [], done = false, currentVideo = null;
 
-    function clear(){ timers.forEach(clearTimeout); timers = []; }
+    function clear(){ timers.forEach(pClearTimeout); timers = []; }
     function showDot(i){
       dots.forEach((d, di) => {
         d.classList.toggle('active', di === i);
@@ -568,7 +667,7 @@
       clear();
       stopCurrentVideo();
       slide.classList.add('fading');
-      timers.push(setTimeout(() => {
+      timers.push(pTimeout(() => {
         slide.hidden = true;
         slide.classList.remove('fading');
         onNext();
@@ -580,7 +679,7 @@
     function renderScene(html, afterMount){
       const old = cinema.querySelector('.js-scene');
       const mount = () => { cinema.innerHTML = html; if (afterMount) afterMount(); };
-      if (old && !reduced){ old.classList.add('leaving'); timers.push(setTimeout(mount, 380)); }
+      if (old && !reduced){ old.classList.add('leaving'); timers.push(pTimeout(mount, 380)); }
       else mount();
     }
 
@@ -601,11 +700,11 @@
             s.style.top = (10 + Math.random()*80) + '%';
             s.style.animationDelay = (i*0.35) + 's';
           });
-          timers.push(setTimeout(() => scene.classList.add('lit'), 100));
-          timers.push(setTimeout(() => scene.querySelector('.js-date-eyebrow').classList.add('show'), 150));
-          timers.push(setTimeout(() => scene.querySelector('.js-date-year').classList.add('show'), 500));
-          timers.push(setTimeout(() => scene.querySelector('.js-date-rule').classList.add('show'), 1500));
-          timers.push(setTimeout(onNext, 2700));
+          timers.push(pTimeout(() => scene.classList.add('lit'), 100));
+          timers.push(pTimeout(() => scene.querySelector('.js-date-eyebrow').classList.add('show'), 150));
+          timers.push(pTimeout(() => scene.querySelector('.js-date-year').classList.add('show'), 500));
+          timers.push(pTimeout(() => scene.querySelector('.js-date-rule').classList.add('show'), 1500));
+          timers.push(pTimeout(onNext, 2700));
         });
     }
 
@@ -645,10 +744,10 @@
             try { video.pause(); } catch(e){}
             if (wasBgmPlaying) bgm.play().catch(() => {});
             currentVideo = null;
-            timers.push(setTimeout(onNext, 500));
+            timers.push(pTimeout(onNext, 500));
           }
 
-          video.addEventListener('ended', () => timers.push(setTimeout(advance, 700)));
+          video.addEventListener('ended', () => timers.push(pTimeout(advance, 700)));
           video.addEventListener('playing', () => frame.classList.add('playing'));
           // no real clip at that path yet — fall back to a working sample
           // rather than leave her staring at a broken player
@@ -657,7 +756,7 @@
             video.load();
           }, { once:true });
 
-          timers.push(setTimeout(() => frame.classList.add('show'), 60));
+          timers.push(pTimeout(() => frame.classList.add('show'), 60));
 
           // she's asked, never auto-started — a tap begins it
           function startWatching(){
@@ -671,7 +770,7 @@
 
           // if she wanders off without ever tapping play, don't strand
           // the story here forever
-          timers.push(setTimeout(() => { if (video.paused) advance(); }, 45000));
+          timers.push(pTimeout(() => { if (video.paused) advance(); }, 45000));
         });
     }
 
@@ -688,16 +787,16 @@
           const year = $('jsCapYear'), title = $('jsCapTitle'), rule = $('jsCapRule'), text = $('jsCapText'), btn = $('jsCapContinue');
           let advanced = false;
           function advance(){ if (advanced) return; advanced = true; onNext(); }
-          timers.push(setTimeout(() => year.classList.add('show'), 100));
-          timers.push(setTimeout(() => title.classList.add('show'), 500));
-          timers.push(setTimeout(() => rule.classList.add('show'), 1000));
-          timers.push(setTimeout(() => text.classList.add('show'), 1350));
-          timers.push(setTimeout(() => {
+          timers.push(pTimeout(() => year.classList.add('show'), 100));
+          timers.push(pTimeout(() => title.classList.add('show'), 500));
+          timers.push(pTimeout(() => rule.classList.add('show'), 1000));
+          timers.push(pTimeout(() => text.classList.add('show'), 1350));
+          timers.push(pTimeout(() => {
             btn.hidden = false;
             revealNextFrame(() => btn.classList.add('show'));
           }, 2400));
           btn.addEventListener('click', advance);
-          timers.push(setTimeout(advance, 7500));
+          timers.push(pTimeout(advance, 7500));
         });
     }
 
@@ -709,7 +808,7 @@
             <h3 class="js-cap-title show">${ch.title}</h3>
             <p class="js-cap-text show">${ch.cap}</p>
           </div>`);
-        timers.push(setTimeout(next, 1400));
+        timers.push(pTimeout(next, 1400));
         return;
       }
       showDateScene(ch, () => showCaptionScene(ch, () => showVideoScene(ch, next)));
@@ -763,13 +862,13 @@
       const dur = 2.8 + Math.random() * 1.4;
       m.style.animationDuration = dur + 's';
       wishDustEl.appendChild(m);
-      setTimeout(() => m.remove(), dur * 1000 + 100);
+      pTimeout(() => m.remove(), dur * 1000 + 100);
     }
-    for (let i=0;i<3;i++) setTimeout(spawn, i*260);
-    wishDustTimer = setInterval(spawn, 420);
+    for (let i=0;i<3;i++) pTimeout(spawn, i*260);
+    wishDustTimer = pInterval(spawn, 420);
   }
   function stopWishDust(){
-    if (wishDustTimer){ clearInterval(wishDustTimer); wishDustTimer = null; }
+    if (wishDustTimer){ pClearInterval(wishDustTimer); wishDustTimer = null; }
   }
 
   // no on-screen instructions here — just the voice. the cake builds
@@ -781,23 +880,23 @@
     cakeSub.textContent = '';
     startBirthdaySong();
 
-    setTimeout(() => { cakeStage.classList.add('tier1-in'); }, 300);
-    setTimeout(() => { cakeStage.classList.add('tier2-in'); }, 1150);
-    setTimeout(() => { cakeStage.classList.add('tier3-in'); }, 2000);
-    setTimeout(() => { cakeStage.classList.add('icing-on'); }, 2850);
-    setTimeout(() => {
+    pTimeout(() => { cakeStage.classList.add('tier1-in'); }, 300);
+    pTimeout(() => { cakeStage.classList.add('tier2-in'); }, 1150);
+    pTimeout(() => { cakeStage.classList.add('tier3-in'); }, 2000);
+    pTimeout(() => { cakeStage.classList.add('icing-on'); }, 2850);
+    pTimeout(() => {
       cakeStage.classList.add('candles-in');
       cakeSub.textContent = 'lighting your candles…';
     }, 4000);
-    setTimeout(() => { cakeStage.classList.add('hand-in'); }, 4700);
-    setTimeout(() => { cakeStage.classList.add('candle1-flame'); }, 5700);
-    setTimeout(() => { cakeStage.classList.add('candle2-flame'); }, 6500);
-    setTimeout(() => { cakeStage.classList.add('lit'); startWishDust(); }, 7700);
-    setTimeout(() => { cakeSub.textContent = 'twenty-three, and every one of them worth celebrating'; }, 7900);
+    pTimeout(() => { cakeStage.classList.add('hand-in'); }, 4700);
+    pTimeout(() => { cakeStage.classList.add('candle1-flame'); }, 5700);
+    pTimeout(() => { cakeStage.classList.add('candle2-flame'); }, 6500);
+    pTimeout(() => { cakeStage.classList.add('lit'); startWishDust(); }, 7700);
+    pTimeout(() => { cakeSub.textContent = 'twenty-three, and every one of them worth celebrating'; }, 7900);
 
-    setTimeout(() => { speak('Close your eyes, and make a wish.'); }, 8500);
-    setTimeout(() => { speak('Now open your eyes.'); }, 13800);
-    setTimeout(() => {
+    pTimeout(() => { speak('Close your eyes, and make a wish.'); }, 8500);
+    pTimeout(() => { speak('Now open your eyes.'); }, 13800);
+    pTimeout(() => {
       speak('Now, press and hold to blow out the candles.');
       canBlow = true;
       cakeBtn.disabled = false;
@@ -826,7 +925,7 @@
         trail.className = 'wish-star-trail';
         trail.style.transform = `translate(${x}px, ${y}px)`;
         document.body.appendChild(trail);
-        setTimeout(() => trail.remove(), 720);
+        pTimeout(() => trail.remove(), 720);
       }
       if (t < 1) requestAnimationFrame(frame);
       else wishStarEl.style.opacity = '0';
@@ -850,26 +949,26 @@
     const r = cakeBtn.getBoundingClientRect();
     burst(r.left + r.width/2, r.top + r.height*0.18, 110);
     cannons();
-    setTimeout(cannons, 550);
-    setTimeout(() => burst(innerWidth/2, innerHeight*0.4, 80), 300);
-    for (let i=0;i<22;i++) setTimeout(() => spawnBalloon(true), i*90);
+    pTimeout(cannons, 550);
+    pTimeout(() => burst(innerWidth/2, innerHeight*0.4, 80), 300);
+    for (let i=0;i<22;i++) pTimeout(() => spawnBalloon(true), i*90);
 
-    setTimeout(() => cakeStage.classList.add('bloom'), 500);
-    setTimeout(launchWishStar, 900);
+    pTimeout(() => cakeStage.classList.add('bloom'), 500);
+    pTimeout(launchWishStar, 900);
 
-    setTimeout(() => {
+    pTimeout(() => {
       cakeBlessing.hidden = false;
       cakeSub.textContent = 'your wish is already on its way';
       speak('May all your wishes come true.');
       burst(innerWidth/2, innerHeight*0.45, 60);
     }, 3400);
 
-    setTimeout(stopBirthdaySong, 9000);
+    pTimeout(stopBirthdaySong, 9000);
 
-    setTimeout(() => {
+    pTimeout(() => {
       const slide = $('cakeSlide');
       slide.classList.add('fading');
-      setTimeout(() => {
+      pTimeout(() => {
         slide.hidden = true;
         slide.classList.remove('fading');
         if (wishOnDone) wishOnDone();
@@ -970,8 +1069,8 @@
       fill.style.width = p.toFixed(2)+'%';
     }
     render();
-    const t = setInterval(() => {
-      if (!document.body.contains(card)){ clearInterval(t); return; }
+    const t = pInterval(() => {
+      if (!document.body.contains(card)){ pClearInterval(t); return; }
       render();
     }, 1000);
   }
@@ -1063,7 +1162,7 @@
     currentModalKey = null;
     // closing a secret's modal moves on to the next one
     if (SECRETS.some(s => s.key === key)){
-      setTimeout(nextSecret, 400);
+      pTimeout(nextSecret, 400);
     }
   }
   $('modalClose').addEventListener('click', closeModal);
@@ -1157,7 +1256,7 @@
   function flipCard(card, onFinish){
     if (card.classList.contains('flipped')) return;
     card.classList.add('flipped');
-    setTimeout(() => initScratch(card, onFinish), 900);
+    pTimeout(() => initScratch(card, onFinish), 900);
   }
 
   function wireScratchCard(card, onFinish){
@@ -1186,7 +1285,7 @@
   // in lockstep.
   function autoFlipCards(cards, onFinish, baseDelay = 1000, stagger = 260){
     cards.forEach((card, i) => {
-      setTimeout(() => flipCard(card, onFinish), baseDelay + i * stagger);
+      pTimeout(() => flipCard(card, onFinish), baseDelay + i * stagger);
     });
   }
 
@@ -1249,7 +1348,7 @@
     if (card.dataset.found) return;
     card.dataset.found = '1';
     card.classList.add('done');
-    setTimeout(() => openModal(card.dataset.card), 550);
+    pTimeout(() => openModal(card.dataset.card), 550);
   }
 
   function nextSecret(){
@@ -1335,10 +1434,10 @@
       advanced = true;
       try { video.pause(); } catch(e){}
       caption.classList.add('show');
-      setTimeout(() => {
+      pTimeout(() => {
         if (wasBgmPlaying) bgm.play().catch(() => {});
         finalSlide.classList.add('fading');
-        setTimeout(() => {
+        pTimeout(() => {
           finalSlide.hidden = true;
           finalSlide.classList.remove('fading');
           goBoxSequence();
@@ -1346,7 +1445,7 @@
       }, 2600);
     }
 
-    video.addEventListener('ended', () => setTimeout(advance, 500));
+    video.addEventListener('ended', () => pTimeout(advance, 500));
     video.addEventListener('playing', () => frame.classList.add('playing'));
     // no real clip at that path yet — fall back to a working sample
     // rather than leave her staring at a broken player
@@ -1355,7 +1454,7 @@
       video.load();
     }, { once:true });
 
-    setTimeout(() => frame.classList.add('show'), 60);
+    pTimeout(() => frame.classList.add('show'), 60);
 
     // try with sound; if the browser blocks that, fall back to muted
     // autoplay with a one-tap way to turn the sound on
@@ -1366,7 +1465,7 @@
     });
     unmuteBtn.addEventListener('click', () => { video.muted = false; unmuteBtn.hidden = true; });
 
-    setTimeout(advance, 30000); // safety net if a clip never fires 'ended'
+    pTimeout(advance, 30000); // safety net if a clip never fires 'ended'
   }
 
   // she just scratched it — let the reveal breathe for a few seconds
@@ -1374,7 +1473,7 @@
   function onFinalFound(card){
     finalSub.textContent = 'just a moment…';
     finalSub.classList.add('breathe');
-    setTimeout(showFinalVideo, 7000);
+    pTimeout(showFinalVideo, 7000);
   }
   wireScratchCard(finalCardEl, onFinalFound);
 
@@ -1431,7 +1530,7 @@
     };
     if (old && !reduced){
       old.classList.add('leaving');
-      setTimeout(mount, 380);
+      pTimeout(mount, 380);
     } else {
       mount();
     }
@@ -1459,10 +1558,10 @@
       const dur = 2.2 + Math.random()*1.2;
       s.style.animationDuration = dur+'s';
       container.appendChild(s);
-      setTimeout(() => s.remove(), dur*1000+100);
+      pTimeout(() => s.remove(), dur*1000+100);
     }
-    for (let i=0;i<4;i++) setTimeout(spawn, i*220);
-    boxSparkleTimer = setInterval(spawn, 380);
+    for (let i=0;i<4;i++) pTimeout(spawn, i*220);
+    boxSparkleTimer = pInterval(spawn, 380);
   }
 
   // a little treasure chest that bursts open on its own — no scratching —
@@ -1505,26 +1604,26 @@
         const stage = $('chestStage'), reveal = $('chestReveal'), continueBtn = $('chestContinue');
 
         stage.classList.add('shaking');
-        setTimeout(() => {
+        pTimeout(() => {
           stage.classList.remove('shaking');
           stage.classList.add('opened');
           cannons();
-          setTimeout(() => burst(innerWidth/2, innerHeight*0.32, 90), 200);
+          pTimeout(() => burst(innerWidth/2, innerHeight*0.32, 90), 200);
           startBoxSparkles($('chestSparkles'));
         }, 900);
 
-        setTimeout(() => {
+        pTimeout(() => {
           reveal.hidden = false;
           revealNextFrame(() => reveal.classList.add('show'));
         }, 1900);
 
-        setTimeout(() => {
+        pTimeout(() => {
           continueBtn.hidden = false;
           revealNextFrame(() => continueBtn.classList.add('show'));
         }, 3300);
 
         continueBtn.addEventListener('click', () => {
-          if (boxSparkleTimer){ clearInterval(boxSparkleTimer); boxSparkleTimer = null; }
+          if (boxSparkleTimer){ pClearInterval(boxSparkleTimer); boxSparkleTimer = null; }
           goOpenedQuestion();
         });
       }
@@ -1618,7 +1717,7 @@
   /* ================= 9 · The ending ================= */
   function goEnding(){
     boxSlide.classList.add('fading');
-    setTimeout(() => {
+    pTimeout(() => {
       boxSlide.hidden = true;
       boxSlide.classList.remove('fading');
       const endingSlide = $('endingSlide');
@@ -1627,9 +1726,9 @@
       burst(innerWidth/2, innerHeight*0.3, 60);
 
       // let her sit with the bouquet a while, then quietly close the book
-      setTimeout(() => {
+      pTimeout(() => {
         endingSlide.classList.add('fading');
-        setTimeout(() => {
+        pTimeout(() => {
           endingSlide.hidden = true;
           endingSlide.classList.remove('fading');
           goMemories(goEpilogue);
@@ -1681,7 +1780,7 @@
       resolvePhoto(base, cb, () => cb(fallback));
     }
     function clearAuto(){
-      if (advanceTimer){ clearTimeout(advanceTimer); advanceTimer = null; }
+      if (advanceTimer){ pClearTimeout(advanceTimer); advanceTimer = null; }
     }
     // she reaches the last photo and the montage waits here — nothing
     // sweeps her onward until she chooses to continue
@@ -1703,11 +1802,11 @@
         hideImg.classList.remove('show');
         active = 1 - active;
         clearAuto();
-        advanceTimer = setTimeout(next, reduced ? 700 : 1800);
+        advanceTimer = pTimeout(next, reduced ? 700 : 1800);
       });
     }
     function next(){
-      if (idx + 1 >= sources.length){ clearAuto(); setTimeout(finish, reduced ? 200 : 500); return; }
+      if (idx + 1 >= sources.length){ clearAuto(); pTimeout(finish, reduced ? 200 : 500); return; }
       render(idx + 1);
     }
     function prev(){
@@ -1719,7 +1818,7 @@
     prevBtn.onclick = prev;
     continueBtn.onclick = () => {
       slide.classList.add('fading');
-      setTimeout(() => {
+      pTimeout(() => {
         slide.hidden = true;
         slide.classList.remove('fading');
         onNext();
@@ -1741,10 +1840,10 @@
       const dur = 10 + Math.random()*8;
       s.style.animationDuration = dur + 's';
       el.appendChild(s);
-      setTimeout(() => s.remove(), dur*1000);
+      pTimeout(() => s.remove(), dur*1000);
     }
-    for (let i=0;i<8;i++) setTimeout(spawn, i*300);
-    setInterval(spawn, 900);
+    for (let i=0;i<8;i++) pTimeout(spawn, i*300);
+    pInterval(spawn, 900);
   }
 
   /* ================= 10 · Epilogue — one last quiet note, then black ================= */
@@ -1762,33 +1861,59 @@
     }
   })();
 
-  // a last, unhurried note fades in on black, holds, ends on "The End." —
-  // then everything fades away, stars included, leaving pure black.
-  // nothing more to tap or read: that stillness is the actual ending.
+  // a last, unhurried note fades in on black, holds, then two closing
+  // lines arrive one at a time — "Just the Beginning.", then "To Be
+  // Continued…" — each fading fully away before the next appears, the
+  // last one lingering longest, into a screen with nothing left on it
   function goEpilogue(){
     const slide = $('epilogueSlide'), wishes = $('epilogueWishes'),
-          endmark = $('epilogueEndmark'), stars = $('epilogueStars');
+          endmark = $('epilogueEndmark'), endText = $('epilogueEndText'),
+          stars = $('epilogueStars');
     slide.hidden = false;
     const lines = Array.from(wishes.querySelectorAll('.epilogue-line'));
 
-    // beat 2 — "The End." arrives alone, only once the wishes have
-    // completely cleared away, then that too fades, stars included,
-    // into a screen with nothing left on it at all
+    // beat 2 — two closing lines, each arriving only once the last has
+    // completely cleared away; the second lingers, then fades slowly
+    // alongside the stars, into a screen with nothing left on it at all
     function showEndmark(){
       endmark.hidden = false;
+      endText.textContent = 'Just the Beginning.';
+
+      if (reduced){
+        revealNextFrame(() => endmark.classList.add('show'));
+        pTimeout(() => { endmark.classList.remove('show'); endmark.classList.add('fade-out'); }, 1400);
+        pTimeout(() => {
+          endmark.classList.remove('fade-out');
+          endText.textContent = 'To Be Continued…';
+          revealNextFrame(() => endmark.classList.add('show'));
+        }, 1600);
+        pTimeout(() => {
+          endmark.classList.remove('show');
+          endmark.classList.add('fade-out-slow');
+          stars.classList.add('fade-out');
+        }, 3200);
+        return;
+      }
+
       revealNextFrame(() => endmark.classList.add('show'));
-      setTimeout(() => {
+      pTimeout(() => { endmark.classList.remove('show'); endmark.classList.add('fade-out'); }, 4600);
+      pTimeout(() => {
+        endmark.classList.remove('fade-out');
+        endText.textContent = 'To Be Continued…';
+        revealNextFrame(() => endmark.classList.add('show'));
+      }, 7000);
+      pTimeout(() => {
         endmark.classList.remove('show');
-        endmark.classList.add('fade-out');
+        endmark.classList.add('fade-out-slow');
         stars.classList.add('fade-out');
-      }, reduced ? 2600 : 4600);
+      }, 11600);
     }
 
     if (reduced){
       lines.forEach(l => l.classList.add('show'));
-      setTimeout(() => {
+      pTimeout(() => {
         wishes.classList.add('fade-out');
-        setTimeout(showEndmark, 700);
+        pTimeout(showEndmark, 700);
       }, 3000);
       return;
     }
@@ -1796,12 +1921,12 @@
     // beat 1 — the wishes, then a full fade before anything else appears
     let delay = 1000;
     lines.forEach((l, i) => {
-      setTimeout(() => l.classList.add('show'), delay);
+      pTimeout(() => l.classList.add('show'), delay);
       delay += (i === lines.length - 1) ? 2600 : 1900;
     });
     delay += 3600; // hold on the last line before it clears
-    setTimeout(() => wishes.classList.add('fade-out'), delay);
+    pTimeout(() => wishes.classList.add('fade-out'), delay);
     delay += 2600; // wait for the wishes to be fully gone
-    setTimeout(showEndmark, delay);
+    pTimeout(showEndmark, delay);
   }
 })();
