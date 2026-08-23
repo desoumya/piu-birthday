@@ -32,6 +32,20 @@
   <svg class="pt-icon pt-icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.4v13.2c0 .8.9 1.3 1.6.9l10.4-6.6c.6-.4.6-1.4 0-1.8L9.6 4.5c-.7-.4-1.6.1-1.6.9z"/></svg>
 </button>
 
+<!-- ============ Previous / Next — step one screen back or forward and replay it ============ -->
+<div class="nav-toggles">
+  <button class="prev-toggle" id="prevToggle" aria-label="Previous" hidden>
+    <span class="pv-ring" aria-hidden="true"></span>
+    <span class="pv-ring r2" aria-hidden="true"></span>
+    <svg class="pv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+  <button class="next-toggle" id="nextToggle" aria-label="Next" hidden>
+    <span class="pv-ring" aria-hidden="true"></span>
+    <span class="pv-ring r2" aria-hidden="true"></span>
+    <svg class="pv-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</div>
+
 <audio id="bgm" loop preload="none">
   <source src="assets/audio/song.mp3" type="audio/mpeg">
   <source src="assets/audio/songs.mp3" type="audio/mpeg">
@@ -59,7 +73,7 @@
     </div>
     <p class="prelude-line l4 accent">Today, she turns twenty&#8209;three.</p>
     <button class="prelude-btn" id="preludeBegin" hidden aria-label="Begin">
-      <span>Start the Journey</span><span class="prelude-btn-arrow">→</span>
+      <span>Start Journey</span><span class="prelude-btn-arrow">→</span>
     </button>
   </div>
 </section>
@@ -81,7 +95,7 @@
       <line x1="142" y1="8" x2="234" y2="8"/>
     </svg>
 
-    <p class="gate-sub">from the one who is endlessly<br>lucky to love you</p>
+    <p class="gate-sub">from the one who is endlessly<br>happy to have you</p>
 
     <button id="openGate" class="wax-seal" aria-label="Break the seal and open your letter">
       <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -176,7 +190,7 @@
     </div>
 
     <button class="cel-btn" id="celContinue">
-      <span>Come see what I made you</span>
+      <span>Let's go</span>
       <span class="cel-btn-arrow">→</span>
     </button>
   </div>
@@ -225,7 +239,7 @@
 
     <div class="wind-streaks" aria-hidden="true"><span></span><span></span><span></span></div>
 
-    <button class="cake-btn" id="cakeBtn" aria-label="Press and hold to blow out the candles" disabled>
+    <button class="cake-btn" id="cakeBtn" aria-label="Birthday cake with lit candles" tabindex="-1">
       <span class="cake-hand" id="cakeHand" aria-hidden="true">
         <span class="hand-thumb"></span>
         <span class="hand-palm"></span>
@@ -297,6 +311,13 @@
     </button>
 
     <span class="wish-star" id="wishStar" aria-hidden="true"></span>
+
+    <p class="wish-instruction" id="wishInstruction" hidden>Close your eyes, make a wish, and then blow out the candles.</p>
+
+    <button class="blow-btn" id="blowBtn" hidden aria-label="Blow out the candles">
+      <span class="blow-btn-breath" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span>Blow out the candles</span>
+    </button>
 
     <p class="cake-hint" id="cakeHint">&nbsp;</p>
     <p class="cake-blessing" id="cakeBlessing" hidden>May every single one of your wishes find its way to you. 🤍</p>

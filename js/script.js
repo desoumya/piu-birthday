@@ -51,6 +51,16 @@
     if (rec && rec.handle != null) _clearInterval(rec.handle);
     pTimers.delete(id);
   }
+  // wipes every pending timer app-wide in one shot — used when jumping to a
+  // different page, so nothing left over from the abandoned page can still
+  // fire later and corrupt the page she actually navigated to
+  function pClearAllTimers(){
+    pTimers.forEach(rec => {
+      if (rec.handle == null) return;
+      if (rec.interval) _clearInterval(rec.handle); else _clearTimeout(rec.handle);
+    });
+    pTimers.clear();
+  }
 
   function pauseTimers(){
     const now = Date.now();
@@ -107,6 +117,84 @@
     e.preventDefault();
     setAppPaused(!appPaused);
   });
+
+  /* ================= Previous — one step back, replayed from its start ================
+     navHistory is an indexed list of every distinct screen she's been
+     shown, each entry a {key, fn} pair where fn replays that exact screen
+     from its own start (transitions are bundled into whichever screen
+     they lead into, not their own entry, but each journey chapter — the
+     thing she actually thinks of as "a page" — gets its own entry, not
+     the whole journey at once). navIndex points at the current one.
+     Previous/Next just move that pointer and replay whatever's there —
+     Next only ever reaches screens she's already visited and stepped
+     back from, since there's no such thing as "skip ahead" in a story
+     that's still auto-playing itself out. */
+  let navHistory = [];
+  let navIndex = -1;
+
+  function updateNavButtons(){
+    const prevBtn = $('prevToggle'), nextBtn = $('nextToggle');
+    const canBack = navIndex > 0;
+    const canFwd = navIndex >= 0 && navIndex < navHistory.length - 1;
+    if (prevBtn){
+      if (canBack) prevBtn.hidden = false;
+      prevBtn.classList.toggle('show', canBack);
+      prevBtn.disabled = !canBack;
+    }
+    if (nextBtn){
+      if (canFwd) nextBtn.hidden = false;
+      nextBtn.classList.toggle('show', canFwd);
+      nextBtn.disabled = !canFwd;
+    }
+  }
+  // called at every natural forward step in the story. Stepping forward
+  // from somewhere she'd navigated back to discards the old "future" from
+  // that point on — same as a browser tab: back, then somewhere new, and
+  // the old forward history is gone
+  function enterPage(key, fn){
+    navHistory = navHistory.slice(0, navIndex + 1);
+    navHistory.push({ key, fn });
+    navIndex = navHistory.length - 1;
+    updateNavButtons();
+    fn();
+  }
+  function hideAllSlides(){
+    document.querySelectorAll('.slide').forEach(s => {
+      s.hidden = true;
+      s.classList.remove('fading');
+    });
+    const gateEl = $('gate');
+    gateEl.hidden = true;
+    gateEl.classList.remove('closing');
+  }
+  function teardownForNav(){
+    if (appPaused) setAppPaused(false);
+    pClearAllTimers();
+    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch(e){}
+    document.querySelectorAll('video').forEach(el => { try { el.pause(); } catch(e){} });
+    if (typeof stopBirthdaySong === 'function') stopBirthdaySong();
+    const overlay = $('modalOverlay');
+    if (overlay) overlay.classList.remove('open');
+    hideAllSlides();
+  }
+  function goPrevious(){
+    if (navIndex <= 0) return;
+    teardownForNav();
+    navIndex -= 1;
+    updateNavButtons();
+    navHistory[navIndex].fn();
+  }
+  function goNext(){
+    if (navIndex >= navHistory.length - 1) return;
+    teardownForNav();
+    navIndex += 1;
+    updateNavButtons();
+    navHistory[navIndex].fn();
+  }
+  const prevToggle = $('prevToggle');
+  if (prevToggle) prevToggle.addEventListener('click', goPrevious);
+  const nextToggle = $('nextToggle');
+  if (nextToggle) nextToggle.addEventListener('click', goNext);
 
   // runs fn on the next paint frame, same as requestAnimationFrame — but
   // with a short setTimeout safety net, so a throttled/backgrounded tab
@@ -495,14 +583,29 @@
       revealNextFrame(() => btn.classList.add('show'));
     }, delay + 300);
   }
-  runPrelude();
+  // undoes a previous run's reveal state so going back to this very first
+  // page (from Gate) replays the opening lines rather than snapping
+  // straight to "already read, Begin button showing"
+  function goPreludeEntry(){
+    const lines = Array.from(prelude.querySelectorAll('.prelude-line'));
+    const flourish = $('preludeFlourish');
+    const btn = $('preludeBegin');
+    prelude.hidden = false;
+    prelude.classList.remove('fading');
+    lines.forEach(l => l.classList.remove('show'));
+    flourish.classList.remove('show');
+    btn.hidden = true;
+    btn.classList.remove('show');
+    runPrelude();
+  }
+  enterPage('prelude', goPreludeEntry);
 
   $('preludeBegin').addEventListener('click', () => {
     tryPlayMusic(); // the true first user gesture — best shot at audio autoplay
     prelude.classList.add('fading');
     pTimeout(() => {
       prelude.hidden = true;
-      gate.hidden = false;
+      enterPage('gate', goGateEntry);
     }, 900);
   });
 
@@ -511,21 +614,39 @@
     $('journeySlide'), $('cakeSlide'), $('cardsSlide'), $('finalSlide')
   ];
 
+  function goGateEntry(){
+    gate.hidden = false;
+    gate.classList.remove('closing');
+  }
+
   $('openGate').addEventListener('click', () => {
     gate.classList.add('closing');
     tryPlayMusic();
     pTimeout(() => {
       gate.hidden = true;
-      celebrate.hidden = false;
-      cannons();
-      pTimeout(() => burst(innerWidth/2, innerHeight*0.35, 90), 260);
-      pTimeout(cannons, 900);
-      for (let i=0;i<26;i++) pTimeout(() => spawnBalloon(true), i*90);
-      startBalloons(1400);
-      runAgeSequence();
-      armCelebrationAdvance();
+      enterPage('celebrate', goCelebrateEntry);
     }, 650);
   });
+
+  function goCelebrateEntry(){
+    celebrate.hidden = false;
+    celebrate.classList.remove('fading');
+    // strip any state left over from an earlier visit, so the reveal
+    // plays out fresh instead of snapping straight to "already open"
+    const badge = $('ageBadge'), caption = $('ageCaption'), btn = $('celContinue'), bouquet = $('celBouquet');
+    badge.classList.remove('opening', 'landed');
+    caption.classList.remove('show');
+    btn.classList.remove('show');
+    bouquet.hidden = true;
+    bouquet.classList.remove('show');
+    cannons();
+    pTimeout(() => burst(innerWidth/2, innerHeight*0.35, 90), 260);
+    pTimeout(cannons, 900);
+    for (let i=0;i<26;i++) pTimeout(() => spawnBalloon(true), i*90);
+    startBalloons(1400);
+    runAgeSequence();
+    armCelebrationAdvance();
+  }
 
   // clicking the button = skip; otherwise it moves on by itself once
   // she's had time to read the 23 and the caption
@@ -540,7 +661,7 @@
         celebrate.hidden = true;
         celebrate.classList.remove('fading');
         startBalloons(5200);
-        goGrowingUp();
+        enterPage('journey', goGrowingUp);
       }, 620);
     };
     pTimeout(() => { if (celAdvance) celAdvance(); }, 10500);
@@ -814,21 +935,34 @@
       showDateScene(ch, () => showCaptionScene(ch, () => showVideoScene(ch, next)));
     }
 
+    // each chapter is its own history entry — Previous/Next move chapter
+    // by chapter, not back out to the whole journey. idx is captured by
+    // value per entry (i) and re-synced onto the shared idx on replay, so
+    // a chapter reached by tapping through resumes normal auto-advance
+    // from wherever she jumped to
     function next(){
       idx++;
       if (idx >= JOURNEY_CHAPTERS.length){ finish(); return; }
-      showDot(idx);
-      runChapter(JOURNEY_CHAPTERS[idx]);
+      const i = idx;
+      enterPage('journey-' + i, () => {
+        idx = i;
+        done = false;
+        slide.hidden = false;
+        slide.classList.remove('fading');
+        showDot(i);
+        runChapter(JOURNEY_CHAPTERS[i]);
+      });
     }
 
     next();
   }
   function goJourney(){
     $('journeySlide').hidden = false;
-    runJourneySlide(goCutCake);
+    runJourneySlide(() => enterPage('cake', goCutCake));
   }
 
   function goCutCake(){
+    resetCakeState();
     showTransition(
       ['Now, it’s time to cut the cake.',
        'twenty-three candles, one very important wish.',
@@ -840,15 +974,36 @@
 
   /* ================= 5 · Make a wish ================= */
   const cakeStage = $('cakeStage'), cakeBtn = $('cakeBtn');
-  const cakeHint = $('cakeHint'), cakeSub = $('cakeSub');
+  const cakeSub = $('cakeSub');
   const cakeBlessing = $('cakeBlessing');
+  const wishInstruction = $('wishInstruction'), blowBtn = $('blowBtn');
   const wishDustEl = $('wishDust');
   const breathFill = $('breathRingFill');
   const wishStarEl = $('wishStar');
   const RING_C = 2 * Math.PI * 62;
   let blown = false, wishOnDone = null, wishDustTimer = null;
-  let canBlow = false, holding = false, holdStart = 0, holdRaf = null;
-  const HOLD_MS = 1250;
+  let canBlow = false;
+  const BLOW_MS = 900; // short automatic wind-up on tap, instead of a held press
+
+  // strips every stage class and re-hides the instruction/button so a
+  // replay (via the Previous button) builds the cake up from scratch
+  // again, instead of snapping straight to "already lit"
+  function resetCakeState(){
+    blown = false;
+    canBlow = false;
+    wishOnDone = null;
+    wishDustTimer = null;
+    cakeStage.className = 'cake-stage';
+    wishDustEl.innerHTML = '';
+    cakeSub.textContent = '';
+    wishInstruction.hidden = true;
+    wishInstruction.classList.remove('show');
+    blowBtn.hidden = true;
+    blowBtn.classList.remove('show');
+    blowBtn.disabled = false;
+    cakeBlessing.hidden = true;
+    breathFill.style.strokeDashoffset = String(RING_C);
+  }
 
   // little motes of gold drifting up from the candles while they're lit
   function startWishDust(){
@@ -871,10 +1026,10 @@
     if (wishDustTimer){ pClearInterval(wishDustTimer); wishDustTimer = null; }
   }
 
-  // no on-screen instructions here — just the voice. the cake builds
-  // itself tier by tier, gets iced, the candles arrive, and a hand with
-  // a lit lighter comes in to catch each flame in turn — before the
-  // eyes-closed/wish/blow beats play out
+  // no voice here — just a line on screen she can read at her own pace.
+  // the cake builds itself tier by tier, gets iced, the candles arrive,
+  // and a hand with a lit lighter comes in to catch each flame in turn —
+  // then the instruction appears, then a single "Blow" button to finish it
   function startWishSequence(onDone){
     wishOnDone = onDone;
     cakeSub.textContent = '';
@@ -894,14 +1049,15 @@
     pTimeout(() => { cakeStage.classList.add('lit'); startWishDust(); }, 7700);
     pTimeout(() => { cakeSub.textContent = 'twenty-three, and every one of them worth celebrating'; }, 7900);
 
-    pTimeout(() => { speak('Close your eyes, and make a wish.'); }, 8500);
-    pTimeout(() => { speak('Now open your eyes.'); }, 13800);
     pTimeout(() => {
-      speak('Now, press and hold to blow out the candles.');
+      wishInstruction.hidden = false;
+      revealNextFrame(() => wishInstruction.classList.add('show'));
+    }, 8600);
+    pTimeout(() => {
       canBlow = true;
-      cakeBtn.disabled = false;
-      cakeHint.textContent = 'press & hold to blow them out';
-    }, 16600);
+      blowBtn.hidden = false;
+      revealNextFrame(() => blowBtn.classList.add('show'));
+    }, 9900);
   }
 
   // a single spark launches from the candles and arcs up across the sky —
@@ -939,10 +1095,9 @@
     if (blown) return;
     blown = true;
     canBlow = false;
-    cakeBtn.disabled = true;
+    blowBtn.disabled = true;
     cakeStage.classList.remove('holding','blow-2','blow-3');
     cakeStage.classList.add('blown');
-    cakeHint.textContent = '';
     stopWishDust();
     setBreath(0);
 
@@ -976,45 +1131,32 @@
     }, 7200);
   }
 
-  // she has to press and hold — the flames sway harder, the ring fills,
-  // and only once she's really held it does the wish get sent off
-  function loopHold(){
-    if (!holding) return;
-    const t = Math.min(1, (performance.now()-holdStart)/HOLD_MS);
-    setBreath(t);
-    cakeStage.classList.toggle('blow-2', t > 0.35);
-    cakeStage.classList.toggle('blow-3', t > 0.7);
-    if (t >= 1){ holding = false; doBlow(); return; }
-    holdRaf = requestAnimationFrame(loopHold);
-  }
-  function startHold(e){
+  // one tap does it — a short automatic wind-up (the same flame-sway and
+  // ring-fill the held version used to build up manually) plays on its
+  // own for a beat, then the candles blow out. Simple, not sustained.
+  function doBlowSequence(){
     if (!canBlow || blown) return;
-    e.preventDefault();
     if (reduced){ doBlow(); return; }
-    holding = true; holdStart = performance.now();
     cakeStage.classList.add('holding');
-    cakeHint.textContent = 'keep holding… blow it all out';
-    loopHold();
+    const t0 = performance.now();
+    (function step(now){
+      const t = Math.min(1, (now - t0) / BLOW_MS);
+      setBreath(t);
+      cakeStage.classList.toggle('blow-2', t > 0.4);
+      cakeStage.classList.toggle('blow-3', t > 0.75);
+      if (t < 1) requestAnimationFrame(step);
+      else doBlow();
+    })(t0);
   }
-  function cancelHold(){
-    if (!holding) return;
-    holding = false;
-    if (holdRaf) cancelAnimationFrame(holdRaf);
-    cakeStage.classList.remove('holding','blow-2','blow-3');
-    setBreath(0);
-    if (!blown) cakeHint.textContent = 'press & hold to blow them out';
-  }
-  cakeBtn.addEventListener('pointerdown', startHold);
-  cakeBtn.addEventListener('pointerup', cancelHold);
-  cakeBtn.addEventListener('pointerleave', cancelHold);
-  cakeBtn.addEventListener('pointercancel', cancelHold);
+  blowBtn.addEventListener('click', doBlowSequence);
 
   function goCakeSlide(){
     $('cakeSlide').hidden = false;
-    startWishSequence(goSurprisingPart);
+    startWishSequence(() => enterPage('cards', goSurprisingPart));
   }
 
   function goSurprisingPart(){
+    resetCardsState();
     showTransition(
       ['Now, the surprising part.',
        'five little secrets, waiting to be scratched into the open.',
@@ -1301,7 +1443,7 @@
     { key:'4', icon:'🤍', label:'A Promise<br>For Us' },
     { key:'5', icon:'⏳', label:'Our Journey<br>Ahead' }
   ];
-  let secretIdx = -1, cardsStarted = false;
+  let secretIdx = -1;
 
   (function spawnSecretsStars(){
     const el = $('secretsStars');
@@ -1351,12 +1493,16 @@
     pTimeout(() => openModal(card.dataset.card), 550);
   }
 
-  function nextSecret(){
-    secretIdx++;
-    if (secretIdx >= SECRETS.length){ goFinalTransition(); return; }
-    const s = SECRETS[secretIdx];
-    secretsEyebrow.textContent = `secret ${secretIdx+1} of ${SECRETS.length}`;
-    showSecretDot(secretIdx);
+  // shows secret i fresh — used both by the natural forward flow and by a
+  // direct Previous/Next jump, so it always has to re-show the slide
+  // itself too, not just the card, since a jump bypasses goCardsSlide
+  function showSecretAt(i){
+    secretIdx = i;
+    cardsSlide.hidden = false;
+    cardsSlide.classList.remove('fading');
+    const s = SECRETS[i];
+    secretsEyebrow.textContent = `secret ${i+1} of ${SECRETS.length}`;
+    showSecretDot(i);
     secretsStage.innerHTML = secretCardHTML(s);
     const card = secretsStage.querySelector('.scard');
     revealCards([card]);
@@ -1364,15 +1510,29 @@
     autoFlipCards([card], onSecretFound, 1000);
   }
 
+  // each secret is its own history entry — Previous/Next move card by
+  // card, not back out to the whole five-secrets page
+  function nextSecret(){
+    const i = secretIdx + 1;
+    if (i >= SECRETS.length){ enterPage('final', goFinalTransition); return; }
+    enterPage('cards-' + i, () => showSecretAt(i));
+  }
+
+  // lets the five secrets be replayed from the first one, rather than
+  // resuming wherever she'd gotten to on an earlier visit
+  function resetCardsState(){
+    secretIdx = -1;
+    secretsStage.innerHTML = '';
+  }
+
   function goCardsSlide(){
     cardsSlide.hidden = false;
-    if (cardsStarted) return;
-    cardsStarted = true;
     nextSecret();
   }
 
   function goFinalTransition(){
     cardsSlide.hidden = true; // done with it — don't leave it stacked underneath
+    resetFinalState();
     showTransition(
       ['Now comes one more.',
        'the one I saved for last.',
@@ -1386,8 +1546,13 @@
      closes itself; nothing to tap shut, nothing to scroll to ================= */
   const finalSlide = $('finalSlide');
   const finalStage = $('finalStage');
-  const finalCardEl = finalSlide.querySelector('.scard');
-  const finalSub = $('finalSub');
+  // showFinalVideo() below replaces finalStage's entire contents with the
+  // video scene, permanently discarding the title/card markup — so these
+  // can't stay as one-time const references, they get rebuilt and
+  // re-queried by resetFinalState() every time this page is (re-)entered
+  const FINAL_STAGE_HTML = finalStage.innerHTML;
+  let finalCardEl = finalSlide.querySelector('.scard');
+  let finalSub = $('finalSub');
   let finalStarted = false;
 
   (function spawnFinalStars(){
@@ -1417,7 +1582,7 @@
           <button class="js-unmute" id="finalUnmute" hidden aria-label="Turn sound on">🔇</button>
         </div>
         <div class="final-video-caption">
-          <p class="js-cap-text" id="finalVideoText">I love you, Piu. Happy Birthday. 🎂</p>
+          <p class="js-cap-text" id="finalVideoText">Wish you very very Happy Birthday. 🎂</p>
         </div>
       </div>`;
 
@@ -1440,7 +1605,7 @@
         pTimeout(() => {
           finalSlide.hidden = true;
           finalSlide.classList.remove('fading');
-          goBoxSequence();
+          enterPage('box', goBoxSequence);
         }, 800);
       }, 2600);
     }
@@ -1475,7 +1640,18 @@
     finalSub.classList.add('breathe');
     pTimeout(showFinalVideo, 7000);
   }
-  wireScratchCard(finalCardEl, onFinalFound);
+
+  // showFinalVideo() replaces the card and title with the video player
+  // permanently, so a replay has to rebuild the whole stage from the
+  // original markup, not just clear a few classes
+  function resetFinalState(){
+    finalStarted = false;
+    finalStage.innerHTML = FINAL_STAGE_HTML;
+    finalCardEl = finalStage.querySelector('.scard');
+    finalSub = $('finalSub');
+    wireScratchCard(finalCardEl, onFinalFound);
+  }
+  resetFinalState();
 
   function goFinalSlide(){
     finalSlide.hidden = false;
@@ -1542,7 +1718,7 @@
       ['Wait… this isn’t the end.',
        "There's one more thing waiting for you — smaller than the rest, but it means the most."],
       'keep going',
-      goBoxBlast
+      () => enterPage('box-blast', goBoxBlast)
     );
   }
 
@@ -1568,6 +1744,9 @@
   // and asks her to go open the real box waiting for her
   function goBoxBlast(){
     boxSlide.hidden = false;
+    boxSlide.classList.remove('fading');
+    boxSparkleTimer = null;
+    nudgeIdx = 0;
     renderBoxStep(`
       <div class="chest-stage" id="chestStage">
         <span class="chest-glow" aria-hidden="true"></span>
@@ -1624,13 +1803,14 @@
 
         continueBtn.addEventListener('click', () => {
           if (boxSparkleTimer){ pClearInterval(boxSparkleTimer); boxSparkleTimer = null; }
-          goOpenedQuestion();
+          enterPage('box-opened', () => goOpenedQuestion());
         });
       }
     );
   }
 
   function goOpenedQuestion(nudge){
+    boxSlide.hidden = false;
     renderBoxStep(`
       ${nudge ? `<p class="box-sub">${nudge}</p>` : ''}
       <h2 class="box-title">Have you opened it?</h2>
@@ -1641,7 +1821,7 @@
       () => {
         $('openedYes').addEventListener('click', () => {
           burst(innerWidth/2, innerHeight*0.5, 40);
-          goLikeQuestion();
+          enterPage('box-like', goLikeQuestion);
         });
         $('openedNo').addEventListener('click', () => {
           const msg = NUDGES[nudgeIdx % NUDGES.length];
@@ -1677,6 +1857,7 @@
   }
 
   function goLikeQuestion(){
+    boxSlide.hidden = false;
     renderBoxStep(`
       <h2 class="box-title">Do you like it?</h2>
       <p class="box-sub">be honest…</p>
@@ -1697,8 +1878,14 @@
     );
   }
 
+  // each confirm round is its own history entry — like the journey
+  // chapters and the five secrets, Previous/Next move round by round
   function goConfirmRound(i){
-    if (i >= CONFIRM_ROUNDS.length){ goEnding(); return; }
+    if (i >= CONFIRM_ROUNDS.length){ enterPage('ending', goEnding); return; }
+    enterPage('box-confirm-' + i, () => renderConfirmRound(i));
+  }
+  function renderConfirmRound(i){
+    boxSlide.hidden = false;
     const r = CONFIRM_ROUNDS[i];
     renderBoxStep(`
       <h2 class="box-title">${r.prompt}</h2>
@@ -1722,6 +1909,8 @@
       boxSlide.classList.remove('fading');
       const endingSlide = $('endingSlide');
       endingSlide.hidden = false;
+      endingSlide.classList.remove('fading');
+      $('endingPetals').innerHTML = ''; // clear anything a previous visit left behind
       startEndingPetals();
       burst(innerWidth/2, innerHeight*0.3, 60);
 
@@ -1731,7 +1920,7 @@
         pTimeout(() => {
           endingSlide.hidden = true;
           endingSlide.classList.remove('fading');
-          goMemories(goEpilogue);
+          enterPage('memories', goMemoriesEntry);
         }, 1000);
       }, reduced ? 3000 : 11000);
     }, 800);
@@ -1826,6 +2015,12 @@
     };
     render(0);
   }
+  // the plain (no-argument) entry used both for the natural arrival from
+  // goEnding and for a replay via the Previous button — either way this
+  // page's own continuation is what pushes 'epilogue' onto the history
+  function goMemoriesEntry(){
+    goMemories(() => enterPage('epilogue', goEpilogue));
+  }
 
   function startEndingPetals(){
     if (reduced) return;
@@ -1871,6 +2066,14 @@
           stars = $('epilogueStars');
     slide.hidden = false;
     const lines = Array.from(wishes.querySelectorAll('.epilogue-line'));
+
+    // undo whatever a previous run left behind, so a replay fades the
+    // wishes and closing lines in fresh rather than starting mid-fade
+    wishes.classList.remove('fade-out');
+    lines.forEach(l => l.classList.remove('show'));
+    endmark.hidden = true;
+    endmark.classList.remove('show', 'fade-out', 'fade-out-slow');
+    stars.classList.remove('fade-out');
 
     // beat 2 — two closing lines, each arriving only once the last has
     // completely cleared away; the second lingers, then fades slowly

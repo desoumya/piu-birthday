@@ -203,7 +203,7 @@ body.app-paused .pt-icon-play{ opacity:1; transform: scale(1) rotate(0deg); }
 
 /* the freeze itself — every keyframe animation site-wide holds in place,
    except the pause button's own ring, which keeps gently breathing */
-body.app-paused *:not(.pause-toggle):not(.pause-toggle *){
+body.app-paused *:not(.pause-toggle):not(.pause-toggle *):not(.prev-toggle):not(.prev-toggle *):not(.next-toggle):not(.next-toggle *){
   animation-play-state: paused !important;
 }
 
@@ -211,6 +211,50 @@ body.app-paused *:not(.pause-toggle):not(.pause-toggle *){
   .pause-toggle{ top:12px; right:12px; width:36px; height:36px; }
   .pt-icon{ width:14px; height:14px; }
   .pause-label{ top:19px; right:56px; font-size:.58rem; }
+}
+
+/* ================= PREVIOUS / NEXT — step one screen at a time and
+   replay it; sit together as a pair, top-left, opposite the pause button ================= */
+.nav-toggles{
+  position:fixed; top:16px; left:16px; z-index:600;
+  display:flex; gap:8px;
+}
+.prev-toggle, .next-toggle{
+  appearance:none; -webkit-appearance:none; position:relative;
+  width:40px; height:40px; border-radius:50%;
+  border:1px solid rgba(240,206,134,.42);
+  background: rgba(10,6,10,.42); backdrop-filter: blur(6px);
+  color: var(--gold-soft); cursor:pointer; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: 0 6px 20px rgba(0,0,0,.35);
+  opacity:0; transform:scale(.7); pointer-events:none;
+  transition: background .3s ease, border-color .3s ease, transform .3s cubic-bezier(.3,.9,.3,1.3), box-shadow .3s ease, opacity .4s ease;
+}
+.prev-toggle.show, .next-toggle.show{ opacity:1; transform:scale(1); pointer-events:auto; }
+.prev-toggle:hover, .next-toggle:hover{ background: rgba(240,206,134,.16); border-color: var(--gold); transform: scale(1.09); box-shadow: 0 8px 26px rgba(0,0,0,.4); }
+.prev-toggle.show:hover, .next-toggle.show:hover{ transform: scale(1.09); }
+.prev-toggle:active, .next-toggle:active{ transform: scale(.92); }
+
+/* a slow breathing ring, always quietly present — an invitation, not just
+   a status indicator like the pause button's ring */
+.pv-ring{
+  position:absolute; inset:-7px; border-radius:50%; pointer-events:none;
+  border:1px solid rgba(240,206,134,.35); opacity:0;
+}
+.prev-toggle.show .pv-ring, .next-toggle.show .pv-ring{ animation: pvRingPulse 2.8s ease-out infinite; }
+.prev-toggle.show .pv-ring.r2, .next-toggle.show .pv-ring.r2{ animation-delay:1.4s; }
+@keyframes pvRingPulse{ 0%{ transform:scale(.82); opacity:.65; } 100%{ transform:scale(1.45); opacity:0; } }
+
+.pv-icon{
+  width:16px; height:16px; transition: transform .3s cubic-bezier(.3,.8,.3,1.2);
+}
+.prev-toggle:hover .pv-icon{ transform: translateX(-2.5px); }
+.next-toggle:hover .pv-icon{ transform: translateX(2.5px); }
+
+@media (max-width:600px){
+  .nav-toggles{ top:12px; left:12px; gap:6px; }
+  .prev-toggle, .next-toggle{ width:36px; height:36px; }
+  .pv-icon{ width:14px; height:14px; }
 }
 
 /* ================= 0 · PRELUDE ================= */
@@ -1061,6 +1105,8 @@ body.app-paused *:not(.pause-toggle):not(.pause-toggle *){
 .cake-stage.blown .breath-ring,
 .cake-stage.blown .wind-streaks,
 .cake-stage.blown .cake-hand{ opacity:0; }
+.cake-stage.blown .wish-instruction,
+.cake-stage.blown .blow-btn{ opacity:0; pointer-events:none; transition: opacity .5s ease; }
 
 /* the cake doesn't vanish — it stays, and quietly blooms with warm light
    while the wish is sent off (see .wish-star below) */
@@ -1099,6 +1145,53 @@ body.app-paused *:not(.pause-toggle):not(.pause-toggle *){
   animation: blessingIn 1s cubic-bezier(.2,1.4,.35,1) forwards, shimmer 5s linear infinite 1s;
 }
 @keyframes blessingIn{ 0%{ opacity:0; transform: translateY(20px) scale(.9);} 100%{ opacity:1; transform:none;} }
+
+/* the wish instruction — one line she reads at her own pace, replacing
+   the old spoken "close your eyes / now open them" pacing */
+.wish-instruction{
+  margin: 22px auto 0; max-width: 380px; padding: 0 20px;
+  font-family: var(--serif); font-style:italic; font-size:1.1rem; line-height:1.55;
+  color: rgba(255,255,255,.85); opacity:0; transform:translateY(10px);
+  transition: opacity 1s ease, transform 1s ease;
+}
+.wish-instruction.show{ opacity:1; transform:none; }
+
+/* a single tap blows them out — no holding required. a little breath of
+   wind keeps puffing off the button as a quiet invitation to tap it */
+.blow-btn{
+  position:relative; display:inline-flex; align-items:center; gap:13px;
+  margin-top:24px; padding:15px 34px; border-radius:100px; border:none; cursor:pointer;
+  font-family: var(--sans); font-weight:300; font-size:.74rem;
+  letter-spacing:.22em; text-transform:uppercase;
+  color:#1A0E14;
+  background: linear-gradient(100deg, var(--gold-bright), var(--gold-soft) 55%, var(--gold-bright));
+  background-size:200% auto;
+  box-shadow: 0 12px 30px rgba(240,206,134,.4);
+  opacity:0; transform:translateY(10px);
+  transition: transform .3s cubic-bezier(.3,.9,.3,1.3), box-shadow .3s ease;
+}
+.blow-btn.show{ animation: fadeUp .8s ease forwards, blowBtnPulse 2.6s ease-in-out infinite 1s; }
+@keyframes blowBtnPulse{
+  0%,100%{ box-shadow: 0 12px 30px rgba(240,206,134,.4); }
+  50%{ box-shadow: 0 12px 30px rgba(240,206,134,.4), 0 0 0 10px rgba(240,206,134,.12); }
+}
+.blow-btn:hover{ transform: translateY(-3px) scale(1.04); }
+.blow-btn:active{ transform: scale(.95); }
+.blow-btn[disabled]{ opacity:.4!important; pointer-events:none; animation:none; }
+
+.blow-btn-breath{ position:relative; width:17px; height:12px; flex:none; }
+.blow-btn-breath span{
+  position:absolute; left:0; width:14px; height:1.6px; border-radius:1px;
+  background: rgba(26,14,20,.6); opacity:0;
+}
+.blow-btn-breath span:nth-child(1){ top:0; animation: breathPuff 1.7s ease-in-out infinite; }
+.blow-btn-breath span:nth-child(2){ top:5px; animation: breathPuff 1.7s ease-in-out infinite .18s; }
+.blow-btn-breath span:nth-child(3){ top:10px; animation: breathPuff 1.7s ease-in-out infinite .36s; }
+@keyframes breathPuff{
+  0%{ transform: translateX(0) scaleX(.4); opacity:.3; }
+  55%{ transform: translateX(7px) scaleX(1); opacity:.85; }
+  100%{ transform: translateX(12px) scaleX(.3); opacity:0; }
+}
 
 /* ================= 6 · SCRATCH CARDS ================= */
 .cards-slide{
